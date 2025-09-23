@@ -32,6 +32,7 @@ interface LoanApplicationContextType {
   formData: LoanApplicationData
   updateFormData: (field: keyof LoanApplicationData, value: any) => void
   resetFormData: () => void
+  saveApplication: (data?: Partial<LoanApplicationData>) => void
 }
 
 const defaultFormData: LoanApplicationData = {
@@ -73,8 +74,16 @@ export function LoanApplicationProvider({ children }: { children: ReactNode }) {
     setFormData(defaultFormData)
   }
 
+  const saveApplication = (data?: Partial<LoanApplicationData>) => {
+    setFormData((prev) => {
+      const updated = { ...prev, ...data}
+
+      return updated
+    })
+  }
+
   return (
-    <LoanApplicationContext.Provider value={{ formData, updateFormData, resetFormData }}>
+    <LoanApplicationContext.Provider value={{ formData, updateFormData, resetFormData, saveApplication }}>
       {children}
     </LoanApplicationContext.Provider>
   )
