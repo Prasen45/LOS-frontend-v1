@@ -109,6 +109,63 @@ export default function LoanApplicationLayout({ children, onSubmit }: LoanApplic
           </Card>
 
           {/* Navigation */}
+<div className="flex flex-wrap justify-between mt-8 gap-3">
+  <div className="flex gap-3">
+    <Button
+      type="button"
+      variant="outline"
+      onClick={handlePrevious}
+      disabled={currentStep === 1}
+    >
+      <ArrowLeft className="h-4 w-4 ml-2" />
+      Previous
+    </Button>
+
+    <Button
+      type="button"
+      variant="outline"
+      onClick={() => {
+        alert("Draft saved")
+        // TODO: implement draft save API
+      }}
+    >
+      Save Draft
+    </Button>
+
+    <Button
+      type="button"
+      variant="ghost"
+      onClick={() => router.push("/dashboard/customer")}
+    >
+      Cancel
+    </Button>
+  </div>
+
+  <div>
+    {currentStep < steps.length ? (
+      <Button
+        type="button"
+        onClick={() => {
+          // TODO: validate current step’s form
+          alert("Saved and moving to next step")
+          handleNext()
+        }}
+      >
+        Save & Continue
+        <ArrowRight className="h-4 w-4 ml-2" />
+      </Button>
+    ) : (
+      <Button
+        type="button"
+        onClick={handleSubmit}
+        className="bg-primary"
+      >
+        Submit Application
+      </Button>
+    )}
+  </div>
+</div>
+
           <div className="flex justify-between mt-8">
             <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 1}>
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -116,8 +173,8 @@ export default function LoanApplicationLayout({ children, onSubmit }: LoanApplic
             </Button>
 
             {currentStep < steps.length ? (
-              <Button onClick={handleNext}>
-                Next
+              <Button onClick={handleNext} >
+                Save & Continue
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
