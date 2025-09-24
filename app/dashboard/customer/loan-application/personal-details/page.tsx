@@ -7,6 +7,8 @@ import {useState, useEffect} from 'react'
 import LoanApplicationLayout from '../layout'
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { ReactNode, useMemo } from "react"
+import { usePathname} from "next/navigation"
 import {
   Select,
   SelectContent,
@@ -31,7 +33,24 @@ export default function PersonalDetailsPage() {
   const { formData, updateFormData } = useLoanApplication()
   const [errors, setErrors] = useState<Errors>({})
   const [touched, setTouched] = useState<Touched>({})
-  const route = useRouter()
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const steps = [
+  { number: 1, title: "Personal Details", description: "Basic information and contact details", path: "/dashboard/customer/loan-application/personal-details" },
+  { number: 2, title: "Loan Requirements", description: "Loan amount, tenure and purpose", path: "/dashboard/customer/loan-application/loan-requirements" },
+  { number: 3, title: "KYC Documents", description: "Upload required documents", path: "/dashboard/customer/loan-application/documents" },
+  { number: 4, title: "Review & Submit", description: "Review and submit your application", path: "/dashboard/customer/loan-application/review-submit" },
+]
+
+
+  const currentStepIndex = useMemo(() => {
+    return steps.findIndex((step) => pathname.startsWith(step.path))
+  }, [pathname])
+
+  const currentStep = currentStepIndex >= 0 ? currentStepIndex + 1 : 1
+  const progress = (currentStep / steps.length) * 100
+
 
   const validatefield = (field: string, value:any, idType?:string): string => {
     switch (field) {
@@ -126,6 +145,13 @@ export default function PersonalDetailsPage() {
 
     return newErrors
   }
+
+  const handleNext = () => {
+    if (currentStep < steps.length) {
+      router.push(steps[currentStep].path)
+    }
+  }
+
 
   const handleBlur = (field: keyof typeof formData) => {
     setTouched((prev) => ({ ...prev, [field]: true }))
@@ -420,26 +446,6 @@ export default function PersonalDetailsPage() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="consent"
-          checked={formData.consent}
-          onCheckedChange={(checked) => updateFormData("consent", checked)}
-          onBlur={() => {
-              setTouched(prev =>({ ...prev, consent:true}))
-              const error = validatefield("consent", formData.consent)
-              setErrors(prev => ({ ...prev, consent:error}))
-            }}
-        />
-        <Label htmlFor="consent" className="text-sm">
-          I agree to the Terms & Conditions and consent to KYC verification *
-        </Label>
-        {touched.mobile && errors.mobile && (
-    <p className="text-red-600 text-sm mt-1">{errors.lastName}</p>
-  )}
-      </div>
-      Here’s how to do it at the bottom of your form:
-
 <div className="flex items-center space-x-2">
   <Checkbox
     id="consent"
@@ -459,7 +465,7 @@ export default function PersonalDetailsPage() {
   )}
 </div>
 
-<div className="flex space-x-4 mt-6">
+{/* <div className="flex justify-between mt-8 ">
   <Button
     type="button"
     variant="outline"
@@ -484,7 +490,8 @@ export default function PersonalDetailsPage() {
       )
       if (Object.keys(validationErrors).length === 0) {
         alert("Saved and continuing to next step")
-        // Implement next step navigation here
+        handleNext()
+
       }
     }}
   >
@@ -500,7 +507,7 @@ export default function PersonalDetailsPage() {
 >
   Cancel
 </Button>
-</div>
+</div> */}
     </div>
   )    
 }

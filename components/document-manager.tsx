@@ -58,11 +58,10 @@ interface DocumentManagerProps {
 
 export function DocumentManager({ applicationId, onDocumentsChange, readOnly = false }: DocumentManagerProps) {
   const [documents, setDocuments] = useState<Document[]>([])
-  const [dragActive, setDragActive] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
 
   const documentTypes = [
-    { key: "photo-id", label: "Photo ID", required: true, description: "Aadhaar, PAN, Passport, or Driving License" },
+    { key: "photo-id", label: "Photo ID", required: true, description: "Aadhaar, PAN" },
     {
       key: "address-proof",
       label: "Address Proof",
@@ -76,29 +75,7 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
       description: "Salary slips, ITR, or Business income proof",
     },
     { key: "bank-statement", label: "Bank Statement", required: true, description: "Last 6 months bank statements" },
-    { key: "passport", label: "Passport", required: false, description: "Valid passport (if available)" },
-    { key: "other", label: "Other Documents", required: false, description: "Additional supporting documents" },
   ]
-
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
-    } else if (e.type === "dragleave") {
-      setDragActive(false)
-    }
-  }, [])
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles(Array.from(e.dataTransfer.files))
-    }
-  }, [])
 
   const handleFiles = (files: File[]) => {
     files.forEach((file) => {
@@ -272,41 +249,6 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
           </div>
         </CardContent>
       </Card>
-
-      {/* Upload Area */}
-      {!readOnly && (
-        <Card>
-          <CardContent className="pt-6">
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                dragActive ? "border-primary bg-primary/5" : "border-border"
-              }`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
-              <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Upload Documents</h3>
-              <p className="text-muted-foreground mb-4">Drag and drop your files here, or click to browse</p>
-              <Input
-                type="file"
-                multiple
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))}
-                className="hidden"
-                id="file-upload"
-              />
-              <Label htmlFor="file-upload">
-                <Button variant="outline" className="cursor-pointer bg-transparent">
-                  Choose Files
-                </Button>
-              </Label>
-              <p className="text-xs text-muted-foreground mt-2">Supported formats: PDF, JPG, PNG (Max 5MB each)</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Document Requirements */}
       <Card>
