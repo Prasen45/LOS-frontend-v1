@@ -34,11 +34,12 @@ import {
   Clock,
   FileCheck,
 } from "lucide-react"
+import { Description } from "@radix-ui/react-toast"
 
 interface Document {
   id: string
   name: string
-  type: "photo-id" | "address-proof" | "income-proof" | "bank-statement" | "passport" | "other"
+  type: "photo-id" | "address-proof" | "income-proof" | "bank-statement" | "other"
   file: File | null
   status: "uploading" | "processing" | "verified" | "rejected" | "pending"
   uploadProgress: number
@@ -69,12 +70,16 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
       description: "Utility bill, Bank statement, or Rental agreement",
     },
     {
+      key: "passport-photo", label: "Passport Photo", required: true, description: "Passport Photo"
+    },
+    {
       key: "income-proof",
       label: "Income Proof",
       required: true,
       description: "Salary slips, ITR, or Business income proof",
     },
     { key: "bank-statement", label: "Bank Statement", required: true, description: "Last 6 months bank statements" },
+    
   ]
 
   const handleFiles = (files: File[]) => {
@@ -256,7 +261,7 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
           <CardTitle>Document Requirements</CardTitle>
           <CardDescription>Please ensure you upload all required documents</CardDescription>
         </CardHeader>
-        <CardContent>
+        {/* <CardContent>
           <div className="grid md:grid-cols-2 gap-4">
             {documentTypes.map((docType) => {
               const uploaded = documents.find((doc) => doc.type === docType.key)
@@ -280,14 +285,45 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
                         <span className="ml-1 capitalize">{uploaded.status}</span>
                       </Badge>
                     ) : (
-                      <Badge variant="outline">Not Uploaded</Badge>
+                      <div className="flex items-center gap-2">
+                        { !readOnly && (
+                          <Input type="file" className="w-full" accept={
+                            docType.key === "passport"? "image/jpeg,image/png":
+                            docType.key = "photo-id"? "application/pdf": "application/pdf,image/jpeg,image/png":
+                            docType.key === "bank-statement"? "application/pdf": "application/pdf,image/jpeg,image/png"
+
+                          }
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+
+                            const maxSizeMB = docType.key === "passport"? 5: docType.key === "bank-statement" ? 20 : 10
+                            if (file.size > maxSizeMB * 1024 * 1024) {
+                              alert(`File is too large. Maximum size for ${docType.label} is ${maxSizeMB}MB.`)
+                              return
+                            }
+
+                            const allowedTypes = docType.key === "passport"? ["image/jpeg", "image/png"]: docType.key === "bank-statement"? ["application/pdf"]: ["application/pdf", "image/jpeg", "image/png"]
+                            if(!allowedTypes.includes(file.type)) {
+                              alert(`Invalid file type for ${docType.label}. Allowed: ${allowedTypes.join(", ")}`)
+                              return
+                            }
+
+                            const newDoc: Document = {
+                              id: `doc_${Date.now()}_${Math.random().toString}`
+                            }
+                          }}   ></Input>
+                        )
+
+                        }
+                      </div>
                     )}
                   </div>
                 </div>
               )
             })}
           </div>
-        </CardContent>
+        </CardContent> */}
       </Card>
 
       {/* Uploaded Documents */}
