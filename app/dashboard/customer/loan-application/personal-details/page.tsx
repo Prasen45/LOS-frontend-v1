@@ -470,7 +470,6 @@ export default function PersonalDetailsPage() {
           <p className="text-red-600 text-sm mt-1">{errors.consent}</p>
         )}
       </div>
-
     </div>
   )
 }
