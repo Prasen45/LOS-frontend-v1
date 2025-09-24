@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import Swal from 'sweetalert2' // <--- Import SweetAlert2 here
+import Swal from 'sweetalert2'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -18,9 +18,8 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select'
-import { Staff } from './types' // Make sure this points to your actual types file
+import { Staff } from './types'
 
-// Make staff_id optional in the form props
 type StaffFormProps<T extends Partial<Staff>> = {
   initialData?: T
   onSubmit: (data: T) => void
@@ -38,28 +37,40 @@ export default function StaffForm<T extends Partial<Staff>>({
     mobile: '',
     first_name: '',
     last_name: '',
-    role: 'sales',
+    role: 'sales_executive', // Updated default role
     ...initialData,
   } as T)
 
+  const [errors, setErrors] = useState<Partial<Record<keyof Staff, string>>>({})
+
   const handleChange = (field: keyof Staff, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value } as T))
+    setErrors((prev) => ({ ...prev, [field]: '' }))
+  }
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<Record<keyof Staff, string>> = {}
+
+    if (!form.username) newErrors.username = 'Username is required'
+    if (!form.email) newErrors.email = 'Email is required'
+    if (!form.mobile) newErrors.mobile = 'Mobile is required'
+    if (!form.first_name) newErrors.first_name = 'First name is required'
+    if (!form.last_name) newErrors.last_name = 'Last name is required'
+    if (!form.role) newErrors.role = 'Role is required'
+
+    setErrors(newErrors)
+
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (
-      !form.username ||
-      !form.email ||
-      !form.mobile ||
-      !form.first_name ||
-      !form.last_name
-    ) {
+    if (!validateForm()) {
       await Swal.fire({
         icon: 'error',
-        title: 'Oops...',
-        text: 'Please fill in all fields.',
+        title: 'Validation Error',
+        text: 'Please fill in all required fields.',
       })
       return
     }
@@ -92,62 +103,74 @@ export default function StaffForm<T extends Partial<Staff>>({
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <Label>Username</Label>
+            <Label>Username *</Label>
             <Input
+              placeholder="Enter username"
               value={form.username}
               onChange={(e) => handleChange('username', e.target.value)}
             />
+            {errors.username && <p className="text-red-500 text-sm">{errors.username}</p>}
           </div>
 
           <div>
-            <Label>Email</Label>
+            <Label>Email *</Label>
             <Input
               type="email"
+              placeholder="Enter email address"
               value={form.email}
               onChange={(e) => handleChange('email', e.target.value)}
             />
+            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
           </div>
 
           <div>
-            <Label>Mobile</Label>
+            <Label>Mobile *</Label>
             <Input
               type="tel"
+              placeholder="Enter mobile number"
               value={form.mobile}
               onChange={(e) => handleChange('mobile', e.target.value)}
             />
+            {errors.mobile && <p className="text-red-500 text-sm">{errors.mobile}</p>}
           </div>
 
           <div>
-            <Label>First Name</Label>
+            <Label>First Name *</Label>
             <Input
+              placeholder="Enter first name"
               value={form.first_name}
               onChange={(e) => handleChange('first_name', e.target.value)}
             />
+            {errors.first_name && <p className="text-red-500 text-sm">{errors.first_name}</p>}
           </div>
 
           <div>
-            <Label>Last Name</Label>
+            <Label>Last Name *</Label>
             <Input
+              placeholder="Enter last name"
               value={form.last_name}
               onChange={(e) => handleChange('last_name', e.target.value)}
             />
+            {errors.last_name && <p className="text-red-500 text-sm">{errors.last_name}</p>}
           </div>
 
           <div>
-            <Label>Role</Label>
+            <Label>Role *</Label>
             <Select
               value={form.role}
               onValueChange={(value) => handleChange('role', value)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Role" />
+                <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sales">Sales</SelectItem>
-                <SelectItem value="credit">Credit</SelectItem>
-                <SelectItem value="operations">Operations</SelectItem>
+                <SelectItem value="sales_executive">Sales Executive</SelectItem>
+                <SelectItem value="credit_analyst">Credit Analyst</SelectItem>
+                <SelectItem value="credit_manager">Credit Manager</SelectItem>
+                <SelectItem value="disbursement">Disbursement</SelectItem>
               </SelectContent>
             </Select>
+            {errors.role && <p className="text-red-500 text-sm">{errors.role}</p>}
           </div>
 
           <Button type="submit" className="w-full">

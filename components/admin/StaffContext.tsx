@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, ReactNode } from "react"
-import { Staff } from "./types" // ✅ use the shared type here
+import { Staff } from "./types"
 
 interface StaffContextType {
   staffList: Staff[]
@@ -19,7 +19,7 @@ export function StaffProvider({ children }: { children: ReactNode }) {
       mobile: "9876543210",
       first_name: "John",
       last_name: "Doe",
-      role: "sales",
+      role: "sales_executive",
     },
     {
       staff_id: 102,
@@ -28,7 +28,7 @@ export function StaffProvider({ children }: { children: ReactNode }) {
       mobile: "9123456780",
       first_name: "Jane",
       last_name: "Smith",
-      role: "credit",
+      role: "credit_analyst", 
     },
   ])
 

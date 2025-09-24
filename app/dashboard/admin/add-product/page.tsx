@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -33,24 +33,59 @@ export default function AddProductPage() {
     ltv_threshold: "",
   })
 
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
   const handleChange = (field: string, value: string | boolean) => {
     setForm((prev) => ({
       ...prev,
       [field]: value,
     }))
+    setErrors((prev) => ({
+      ...prev,
+      [field]: '',
+    }))
+  }
+
+  const validateForm = () => {
+    const requiredFields = [
+      "product_code",
+      "product_name",
+      "min_amount",
+      "max_amount",
+      "min_tenure",
+      "max_tenure",
+      "min_roi",
+      "max_roi",
+      "foir_threshold",
+      "ltv_threshold",
+    ]
+
+    const newErrors: Record<string, string> = {}
+
+    requiredFields.forEach((field) => {
+      if (
+        form[field as keyof typeof form] === '' ||
+        form[field as keyof typeof form] === null
+      ) {
+        newErrors[field] = 'This field is required'
+      }
+    })
+
+    setErrors(newErrors)
+
+    return Object.keys(newErrors).length === 0
   }
 
   const handleAdd = async () => {
-    if (!form.product_code.trim() || !form.product_name.trim()) {
+    if (!validateForm()) {
       await Swal.fire({
         icon: "error",
-        title: "Oops...",
-        text: "Please enter the product code and product name.",
+        title: "Validation Error",
+        text: "Please fill in all required fields.",
       })
       return
     }
 
-    // Add new product to global product list
     setProductList([...productList, form])
 
     await Swal.fire({
@@ -64,6 +99,15 @@ export default function AddProductPage() {
     router.push("/dashboard/admin?tab=products")
   }
 
+  const renderLabel = (label: string, required = true) => (
+    <Label>
+      {label} {required && <span>*</span>}
+    </Label>
+  )
+
+  const renderError = (field: string) =>
+    errors[field] && <p className="text-sm text-red-500">{errors[field]}</p>
+
   return (
     <div className="px-8 pb-8 pd-4">
       <Card className="max-w-xl mx-auto py-10">
@@ -73,97 +117,96 @@ export default function AddProductPage() {
         <CardContent>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="product_code">Product Code</Label>
+              {renderLabel("Product Code")}
               <Input
-                id="product_code"
                 value={form.product_code}
                 onChange={(e) => handleChange("product_code", e.target.value)}
                 placeholder="Enter product code"
               />
+              {renderError("product_code")}
             </div>
 
             <div>
-              <Label htmlFor="product_name">Product Name</Label>
+              {renderLabel("Product Name")}
               <Input
-                id="product_name"
                 value={form.product_name}
                 onChange={(e) => handleChange("product_name", e.target.value)}
                 placeholder="Enter product name"
               />
+              {renderError("product_name")}
             </div>
 
-            {/* Other input fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="min_amount">Min Amount</Label>
+                {renderLabel("Min Amount")}
                 <Input
-                  id="min_amount"
                   type="number"
                   value={form.min_amount}
                   onChange={(e) => handleChange("min_amount", e.target.value)}
                   placeholder="Min amount"
                 />
+                {renderError("min_amount")}
               </div>
 
               <div>
-                <Label htmlFor="max_amount">Max Amount</Label>
+                {renderLabel("Max Amount")}
                 <Input
-                  id="max_amount"
                   type="number"
                   value={form.max_amount}
                   onChange={(e) => handleChange("max_amount", e.target.value)}
                   placeholder="Max amount"
                 />
+                {renderError("max_amount")}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="min_tenure">Min Tenure (months)</Label>
+                {renderLabel("Min Tenure (months)")}
                 <Input
-                  id="min_tenure"
                   type="number"
                   value={form.min_tenure}
                   onChange={(e) => handleChange("min_tenure", e.target.value)}
                   placeholder="Min tenure"
                 />
+                {renderError("min_tenure")}
               </div>
 
               <div>
-                <Label htmlFor="max_tenure">Max Tenure (months)</Label>
+                {renderLabel("Max Tenure (months)")}
                 <Input
-                  id="max_tenure"
                   type="number"
                   value={form.max_tenure}
                   onChange={(e) => handleChange("max_tenure", e.target.value)}
                   placeholder="Max tenure"
                 />
+                {renderError("max_tenure")}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="min_roi">Min ROI (%)</Label>
+                {renderLabel("Min ROI (%)")}
                 <Input
-                  id="min_roi"
                   type="number"
                   step="0.01"
                   value={form.min_roi}
                   onChange={(e) => handleChange("min_roi", e.target.value)}
                   placeholder="Min ROI"
                 />
+                {renderError("min_roi")}
               </div>
 
               <div>
-                <Label htmlFor="max_roi">Max ROI (%)</Label>
+                {renderLabel("Max ROI (%)")}
                 <Input
-                  id="max_roi"
                   type="number"
                   step="0.01"
                   value={form.max_roi}
                   onChange={(e) => handleChange("max_roi", e.target.value)}
                   placeholder="Max ROI"
                 />
+                {renderError("max_roi")}
               </div>
             </div>
 
@@ -180,27 +223,27 @@ export default function AddProductPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="foir_threshold">FOIR Threshold (%)</Label>
+                {renderLabel("FOIR Threshold (%)")}
                 <Input
-                  id="foir_threshold"
                   type="number"
                   step="0.01"
                   value={form.foir_threshold}
                   onChange={(e) => handleChange("foir_threshold", e.target.value)}
                   placeholder="FOIR Threshold"
                 />
+                {renderError("foir_threshold")}
               </div>
 
               <div>
-                <Label htmlFor="ltv_threshold">LTV Threshold (%)</Label>
+                {renderLabel("LTV Threshold (%)")}
                 <Input
-                  id="ltv_threshold"
                   type="number"
                   step="0.01"
                   value={form.ltv_threshold}
                   onChange={(e) => handleChange("ltv_threshold", e.target.value)}
                   placeholder="LTV Threshold"
                 />
+                {renderError("ltv_threshold")}
               </div>
             </div>
 

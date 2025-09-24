@@ -25,7 +25,7 @@ export default function AddStaffPage() {
   return (
     <>
       <div className="max-w-xl mx-auto py-10">
-        <StaffForm onSubmit={handleAdd} submitLabel="Add Staff" />
+        <StaffForm onSubmit={handleAdd} submitLabel="Add" />
       </div>
     </>
   )
