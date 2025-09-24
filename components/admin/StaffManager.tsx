@@ -1,188 +1,101 @@
 "use client"
 
-import { useState } from "react"
+import Swal from "sweetalert2"
+import withReactContent from "sweetalert2-react-content"
+import { useRouter } from "next/navigation"
+import { useStaff } from "./StaffContext"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Card,
-  CardContent,
   CardHeader,
   CardTitle,
+  CardContent,
 } from "@/components/ui/card"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
 
-type Staff = {
-  id: number
-  name: string
-  username: string
-  role: "sales" | "credit" | "operations"
-}
+const MySwal = withReactContent(Swal)
 
 export default function StaffManager() {
-  const [staffList, setStaffList] = useState<Staff[]>([
-    { id: 1, name: "John Doe", username: "john", role: "sales" },
-    { id: 2, name: "Jane Smith", username: "jane", role: "credit" },
-  ])
+  const router = useRouter()
+  const { staffList, setStaffList } = useStaff()
 
-  const [name, setName] = useState("")
-  const [username, setUsername] = useState("")
-  const [role, setRole] = useState<Staff["role"]>("sales")
-
-  const [editId, setEditId] = useState<number | null>(null)
-
-  const resetForm = () => {
-    setName("")
-    setUsername("")
-    setRole("sales")
-    setEditId(null)
+  const handleEdit = (staff_id: number) => {
+    router.push(`/dashboard/admin/edit-staff?id=${staff_id}`)
   }
 
-  const handleAddOrUpdate = () => {
-    if (!name || !username) {
-      alert("Name and Username are required.")
-      return
-    }
+  const handleAdd = () => {
+    router.push("/dashboard/admin/add-staff")
+  }
 
-    const confirmAction = window.confirm(
-      editId
-        ? "Are you sure you want to update this staff member?"
-        : "Are you sure you want to add this staff member?"
-    )
-
-    if (!confirmAction) return
-
-    if (editId) {
-      // Update existing staff
-      setStaffList((prev) =>
-        prev.map((s) =>
-          s.id === editId ? { ...s, name, username, role } : s
-        )
-      )
-    } else {
-      // Add new staff
-      const newStaff: Staff = {
-        id: Date.now(),
-        name,
-        username,
-        role,
+  const handleDelete = (staff_id: number) => {
+    MySwal.fire({
+      title: "Are you sure?",
+      text: "Do you want to remove this staff member?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, remove!",
+      cancelButtonText: "Cancel",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setStaffList(staffList.filter((s) => s.staff_id !== staff_id))
+        MySwal.fire("Removed!", "Staff member has been removed.", "success")
       }
-      setStaffList([...staffList, newStaff])
-    }
-
-    resetForm()
-  }
-
-  const handleDelete = (id: number) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to remove this staff member?"
-    )
-    if (!confirmDelete) return
-    setStaffList(staffList.filter((s) => s.id !== id))
-  }
-
-  const handleEdit = (staff: Staff) => {
-    setEditId(staff.id)
-    setName(staff.name)
-    setUsername(staff.username)
-    setRole(staff.role)
+    })
   }
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex justify-between items-center">
         <CardTitle>Staff Management</CardTitle>
+        <Button onClick={handleAdd}>Add Staff</Button>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Form */}
-        <div className="grid md:grid-cols-4 gap-4 items-end">
-          <div>
-            <Label>Name</Label>
-            <Input
-              placeholder="Enter staff name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>Username</Label>
-            <Input
-              placeholder="Enter username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>Role</Label>
-            <Select
-              value={role}
-              onValueChange={(value) => setRole(value as Staff["role"])}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sales">Sales</SelectItem>
-                <SelectItem value="credit">Credit</SelectItem>
-                <SelectItem value="operations">Operations</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleAddOrUpdate}>
-            {editId ? "Update" : "Add"}
-          </Button>
-        </div>
-
-        {/* Table/List */}
+      <CardContent>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border rounded">
             <thead className="bg-muted text-foreground">
               <tr>
-                <th className="p-2 border">ID</th>
+                <th className="p-2 border">Staff ID</th>
                 <th className="p-2 border">Username</th>
-                <th className="p-2 border">Name</th>
+                <th className="p-2 border">Full Name</th>
                 <th className="p-2 border">Role</th>
                 <th className="p-2 border text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
+              {staffList.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center p-4 text-muted-foreground">
+                    No staff available.
+                  </td>
+                </tr>
+              )}
               {staffList.map((staff) => (
-                <tr key={staff.id} className="border-t">
-                  <td className="p-2 border">{staff.id}</td>
+                <tr key={staff.staff_id} className="border-t">
+                  <td className="p-2 border">{staff.staff_id}</td>
                   <td className="p-2 border">{staff.username}</td>
-                  <td className="p-2 border">{staff.name}</td>
+                  <td className="p-2 border">
+                    {staff.first_name} {staff.last_name}
+                  </td>
                   <td className="p-2 border capitalize">{staff.role}</td>
                   <td className="p-2 border text-center space-x-2">
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => handleEdit(staff)}
+                      onClick={() => handleEdit(staff.staff_id)}
                     >
                       Edit
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDelete(staff.id)}
+                      onClick={() => handleDelete(staff.staff_id)}
                     >
                       Remove
                     </Button>
                   </td>
                 </tr>
               ))}
-              {staffList.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-center p-4 text-muted-foreground">
-                    No staff added yet.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>

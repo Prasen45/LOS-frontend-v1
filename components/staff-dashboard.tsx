@@ -288,9 +288,9 @@ export function StaffDashboard() {
                               Process
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                          {/* <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
                             {selectedApplication && <LoanWorkflow application={selectedApplication} />}
-                          </DialogContent>
+                          </DialogContent> */}
                         </Dialog>
                       </div>
                     </div>

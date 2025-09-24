@@ -1,27 +1,26 @@
 "use client"
 
+import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import StaffManager from "@/components/admin/StaffManager"
 import ProductManager from "@/components/admin/ProductManager"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const tab = searchParams.get("tab") || "staff"
+
+  const handleTabChange = (value: string) => {
+    const newUrl = `/dashboard/admin?tab=${value}`
+    router.push(newUrl)
+  }
 
   return (
-    <div className="p-8">
-      <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Admin Dashboard</CardTitle>
-          <Button variant="outline" onClick={() => router.push("/")}>
-            Sign Out
-          </Button>
-        </CardHeader>
-      </Card>
-
-      <Tabs defaultValue="staff" className="w-full">
+    <div className="px-8 pb-6">
+      <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
         <TabsList>
           <TabsTrigger value="staff">Manage Staff</TabsTrigger>
           <TabsTrigger value="products">Manage Products</TabsTrigger>
