@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { ReactNode, useMemo } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -8,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, ArrowRight, CheckCircle } from "lucide-react"
 import { LoanApplicationProvider } from "./LoanFormContext"
+import Swal from "sweetalert2"
 
 const steps = [
   { number: 1, title: "Personal Details", description: "Basic information and contact details", path: "/dashboard/customer/loan-application/personal-details" },
@@ -25,33 +25,43 @@ export default function LoanApplicationLayout({ children, onSubmit }: LoanApplic
   const pathname = usePathname()
   const router = useRouter()
 
-  const currentStepIndex = useMemo(() => {
-    return steps.findIndex((step) => pathname.startsWith(step.path))
-  }, [pathname])
-
+  const currentStepIndex = useMemo(() => steps.findIndex(step => pathname.startsWith(step.path)), [pathname])
   const currentStep = currentStepIndex >= 0 ? currentStepIndex + 1 : 1
   const progress = (currentStep / steps.length) * 100
 
   const handlePrevious = () => {
-    if (currentStep > 1) {
-      router.push(steps[currentStep - 2].path)
-    }
+    if (currentStep > 1) router.push(steps[currentStep - 2].path)
   }
-
   const handleNext = () => {
-    if (currentStep < steps.length) {
-      router.push(steps[currentStep].path)
-    }
+    if (currentStep < steps.length) router.push(steps[currentStep].path)
   }
-
   const handleSubmit = () => {
-    if (onSubmit) {
-      onSubmit()
-    }
+    if (onSubmit) onSubmit()
+  }
+  const handleSaveDraft = () => {
+    Swal.fire({
+      icon: "success",
+      title: "Draft saved",
+      showConfirmButton: false,
+      timer: 1500,
+    })
+    router.push("/dashboard/customer")
+  }
+  const handleCancel = () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "Your unsaved changes will be lost!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, cancel",
+      cancelButtonText: "No",
+    }).then(result => {
+      if (result.isConfirmed) router.push("/dashboard/customer")
+    })
   }
 
   return (
-    <LoanApplicationProvider> {/* WRAP EVERYTHING INSIDE CONTEXT PROVIDER */}
+    <LoanApplicationProvider>
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
@@ -66,15 +76,15 @@ export default function LoanApplicationLayout({ children, onSubmit }: LoanApplic
                 <p className="text-muted-foreground">Complete your application in simple steps</p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => router.push("/dashboard/customer")}>
+            {/* <Button variant="outline" onClick={() => router.push("/dashboard/customer")}>
               Save & Exit
-            </Button>
+            </Button> */}
           </div>
 
           {/* Progress */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              {steps.map((step) => (
+              {steps.map(step => (
                 <div
                   key={step.number}
                   className="flex items-center cursor-pointer"
@@ -108,80 +118,40 @@ export default function LoanApplicationLayout({ children, onSubmit }: LoanApplic
             <CardContent>{children}</CardContent>
           </Card>
 
-          {/* Navigation */}
-<div className="flex flex-wrap justify-between mt-8 gap-3">
-  <div className="flex gap-3">
-    <Button
-      type="button"
-      variant="outline"
-      onClick={handlePrevious}
-      disabled={currentStep === 1}
-    >
-      <ArrowLeft className="h-4 w-4 ml-2" />
-      Previous
-    </Button>
-
-    <Button
-      type="button"
-      variant="outline"
-      onClick={() => {
-        alert("Draft saved")
-        // TODO: implement draft save API
-      }}
-    >
-      Save Draft
-    </Button>
-
-    <Button
-      type="button"
-      variant="ghost"
-      onClick={() => router.push("/dashboard/customer")}
-    >
-      Cancel
-    </Button>
-  </div>
-
-  <div>
-    {currentStep < steps.length ? (
-      <Button
-        type="button"
-        onClick={() => {
-          // TODO: validate current step’s form
-          alert("Saved and moving to next step")
-          handleNext()
-        }}
-      >
-        Save & Continue
-        <ArrowRight className="h-4 w-4 ml-2" />
-      </Button>
-    ) : (
-      <Button
-        type="button"
-        onClick={handleSubmit}
-        className="bg-primary"
-      >
-        Submit Application
-      </Button>
-    )}
-  </div>
-</div>
-
-          <div className="flex justify-between mt-8">
-            <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 1}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Previous
-            </Button>
-
-            {currentStep < steps.length ? (
-              <Button onClick={handleNext} >
-                Save & Continue
-                <ArrowRight className="h-4 w-4 ml-2" />
+          {/* Navigation Buttons */}
+          <div className="flex flex-wrap justify-between mt-8 gap-3">
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 1}
+              >
+                <ArrowLeft className="h-4 w-4 ml-2" />
+                Previous
               </Button>
-            ) : (
-              <Button type="button" onClick={handleSubmit} className="bg-primary">
-                Submit Application
+
+              <Button type="button" variant="outline" onClick={handleSaveDraft}>
+                Save Draft
               </Button>
-            )}
+
+              <Button type="button" variant="ghost" onClick={handleCancel}>
+                Cancel
+              </Button>
+            </div>
+
+            <div>
+              {currentStep < steps.length ? (
+                <Button type="button" onClick={handleNext}>
+                  Save & Continue
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <Button type="button" onClick={handleSubmit} className="bg-primary">
+                  Submit Application
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

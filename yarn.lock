@@ -1654,6 +1654,11 @@ use-sync-external-store@^1.2.2:
   resolved "https://registry.npmjs.org/use-sync-external-store/-/use-sync-external-store-1.5.0.tgz"
   integrity sha512-Rb46I4cGGVBmjamjphe8L/UnvJD+uPPtTkNvX5mZgqdbavhI4EbgIWJiIHXJ8bc/i9EQGPRh4DwEURJ552Do0A==
 
+uuid@^13.0.0:
+  version "13.0.0"
+  resolved "https://registry.npmjs.org/uuid/-/uuid-13.0.0.tgz"
+  integrity sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==
+
 vaul@^0.9.9:
   version "0.9.9"
   resolved "https://registry.npmjs.org/vaul/-/vaul-0.9.9.tgz"
