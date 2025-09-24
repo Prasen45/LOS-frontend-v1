@@ -167,7 +167,7 @@ export default function StaffForm<T extends Partial<Staff>>({
                 <SelectItem value="sales_executive">Sales Executive</SelectItem>
                 <SelectItem value="credit_analyst">Credit Analyst</SelectItem>
                 <SelectItem value="credit_manager">Credit Manager</SelectItem>
-                <SelectItem value="disbursement">Disbursement</SelectItem>
+                <SelectItem value="loan_officer">Loan Officer</SelectItem> {/* Changed here */}
               </SelectContent>
             </Select>
             {errors.role && <p className="text-red-500 text-sm">{errors.role}</p>}

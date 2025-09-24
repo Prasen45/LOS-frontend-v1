@@ -11,5 +11,5 @@ export type Staff = {
     | "sales_executive"
     | "credit_analyst"
     | "credit_manager"
-    | "disbursement"
+    | "loan_officer"
 }

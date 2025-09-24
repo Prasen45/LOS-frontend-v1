@@ -184,6 +184,26 @@ function LoginForm({ userType, onLogin }: { userType: "customer" | "staff"; onLo
       router.push("/dashboard/admin") // Go to admin dashboard
     }
 
+    else if (username === "sales" && password === "Test@123"){
+      onLogin()
+      router.push("/dashboard/staff/sales-executive`")
+    }
+
+    else if (username === "creditAnalyst" && password === "Test@123"){
+      onLogin()
+      router.push("/dashboard/staff/credit-analyst")
+    }
+
+    else if (username === "creditManager" && password === "Test@123"){
+      onLogin()
+      router.push("/dashboard/staff/credit-manager")
+    }
+
+    else if (username === "loanOfficer" && password === "Test@123"){
+      onLogin()
+      router.push("/dashboard/staff/loan-officer")
+    }
+
   else {
     onLogin()
     router.push("/dashboard/staff")
