@@ -80,7 +80,7 @@ export default function PersonalDetailsPage() {
 
       case "addressLine1":
         if (!value.trim()) return "Address is required"
-        if (value.trim().length > 5 || value.trim().length < 100) return "Address must be 5-100 characters."
+        if (value.trim().length < 5 || value.trim().length > 100) return "Address must be 5-100 characters."
         return ""
 
       case "city":
@@ -93,9 +93,10 @@ export default function PersonalDetailsPage() {
         return ""
 
       case "postalCode":
-        if(value.trim()) return "Postal Code is required"
+        if (!value.trim()) return "Postal Code is required"
         if (!/^\d{4,10}$/.test(value)) return "Enter valid Postal Code"
         return ""
+
       
       case "nationalIdType":
         if(!value.trim()) return "National Id is required"
@@ -123,7 +124,9 @@ export default function PersonalDetailsPage() {
         return ""
 
       case "consent":
-        if(!value.trim()) return "You must agree to the terms and conditions";
+        if (!value) return "You must agree to the terms and conditions"
+        return ""
+
       
       default:
         return ""
@@ -155,8 +158,8 @@ export default function PersonalDetailsPage() {
 
   const handleBlur = (field: keyof typeof formData) => {
     setTouched((prev) => ({ ...prev, [field]: true }))
-    const fieldError = validatefield(field, formData[field])
-    setErrors((prev) => ({ ...prev, [field]: fieldError }))
+    const fieldError = field === "nationalIdNumber"? validatefield(field, formData[field], formData.nationalIdType): validatefield(field, formData[field])
+    setErrors((prev) => ({ ...prev, [field]: fieldError}))
   }
   
   const handleSubmit = () => {
@@ -244,6 +247,7 @@ export default function PersonalDetailsPage() {
               <SelectItem value="male">Male</SelectItem>
               <SelectItem value="female">Female</SelectItem>
               <SelectItem value="other">Other</SelectItem>
+              <SelectItem value="prefer not">Prefer Not</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -298,7 +302,7 @@ export default function PersonalDetailsPage() {
             onChange={(e) => updateFormData("addressLine1", e.target.value)}
             onBlur={() => {
               setTouched(prev =>({ ...prev, addressLine1:true}))
-              const error = validatefield("firstName", formData.addressLine1)
+              const error = validatefield("addressLine1", formData.addressLine1)
               setErrors(prev => ({ ...prev, addressLine1:error}))
             }}
             placeholder="Enter your address"
@@ -325,7 +329,7 @@ export default function PersonalDetailsPage() {
             onChange={(e) => updateFormData("city", e.target.value)}
             onBlur={() => {
               setTouched(prev =>({ ...prev, city:true}))
-              const error = validatefield("firstName", formData.city)
+              const error = validatefield("city", formData.city)
               setErrors(prev => ({ ...prev, city:error}))
             }}
             placeholder="Enter your city"
@@ -365,6 +369,7 @@ export default function PersonalDetailsPage() {
               setErrors(prev => ({ ...prev, postalCode:error}))
             }}
             placeholder="Enter postal code"
+            required
           />
           {touched.postalCode && errors.postalCode && (
     <p className="text-red-600 text-sm mt-1">{errors.postalCode}</p>
@@ -401,6 +406,7 @@ export default function PersonalDetailsPage() {
               setErrors(prev => ({ ...prev, nationalIdNumber:error}))
             }}
             placeholder="Enter ID number"
+            required
           />
           {touched.nationalIdNumber && errors.nationalIdNumber && (
     <p className="text-red-600 text-sm mt-1">{errors.nationalIdNumber}</p>
@@ -465,7 +471,7 @@ export default function PersonalDetailsPage() {
   )}
 </div>
 
-{/* <div className="flex justify-between mt-8 ">
+<div className="flex space-x-4 mt-6">
   <Button
     type="button"
     variant="outline"
@@ -490,8 +496,7 @@ export default function PersonalDetailsPage() {
       )
       if (Object.keys(validationErrors).length === 0) {
         alert("Saved and continuing to next step")
-        handleNext()
-
+        // Implement next step navigation here
       }
     }}
   >
@@ -507,7 +512,7 @@ export default function PersonalDetailsPage() {
 >
   Cancel
 </Button>
-</div> */}
+</div>
     </div>
   )    
 }

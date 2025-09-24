@@ -184,184 +184,204 @@ function LoginForm({ userType, onLogin }: { userType: "customer" | "staff"; onLo
       router.push("/dashboard/admin") // Go to admin dashboard
     }
 
-    else {
+    else if (username === "sales" && password === "Test@123"){
       onLogin()
-      router.push("/dashboard/staff")
+      router.push("/dashboard/staff/sales-executive`")
     }
-  }
 
-  // Main submit handler
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (userType === "customer") {
-      if (isLocked) {
-        alert(`Account is locked. Please wait ${lockTimeLeft} seconds before trying again.`)
-        return
-      }
-      if (!otpSent) {
-        generateOtp()
-      } else {
-        handleVerifyOTP()
-      }
-    } else {
-      handleStaffLogin()
+    else if (username === "creditAnalyst" && password === "Test@123"){
+      onLogin()
+      router.push("/dashboard/staff/credit-analyst")
     }
-  }
 
-  // Resend OTP handler
-  const handleResendOtp = () => {
-    if (resendTimer === 0 && !isLocked) {
+    else if (username === "creditManager" && password === "Test@123"){
+      onLogin()
+      router.push("/dashboard/staff/credit-manager")
+    }
+
+    else if (username === "loanOfficer" && password === "Test@123"){
+      onLogin()
+      router.push("/dashboard/staff/loan-officer")
+    }
+
+  else {
+    onLogin()
+    router.push("/dashboard/staff")
+  }
+}
+
+// Main submit handler
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault()
+  if (userType === "customer") {
+    if (isLocked) {
+      alert(`Account is locked. Please wait ${lockTimeLeft} seconds before trying again.`)
+      return
+    }
+    if (!otpSent) {
       generateOtp()
-      setOtp("")
+    } else {
+      handleVerifyOTP()
     }
+  } else {
+    handleStaffLogin()
   }
+}
 
-  // Countdown timer effect for resend OTP
-  useEffect(() => {
-    let timer: NodeJS.Timeout
-    if (resendTimer > 0) {
-      timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000)
-    }
-    return () => clearTimeout(timer)
-  }, [resendTimer])
+// Resend OTP handler
+const handleResendOtp = () => {
+  if (resendTimer === 0 && !isLocked) {
+    generateOtp()
+    setOtp("")
+  }
+}
 
-  // Countdown timer effect for lockout
-  useEffect(() => {
-    let lockTimer: NodeJS.Timeout
-    if (isLocked && lockTimeLeft > 0) {
-      lockTimer = setTimeout(() => setLockTimeLeft(lockTimeLeft - 1), 1000)
-    }
-    if (lockTimeLeft === 0 && isLocked) {
-      setIsLocked(false)
-      setInvalidOtpAttempts(0)
-      setOtpSent(false)
-      setGeneratedOtp("")
-      setOtp("")
-    }
-    return () => clearTimeout(lockTimer)
-  }, [isLocked, lockTimeLeft])
+// Countdown timer effect for resend OTP
+useEffect(() => {
+  let timer: NodeJS.Timeout
+  if (resendTimer > 0) {
+    timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000)
+  }
+  return () => clearTimeout(timer)
+}, [resendTimer])
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {userType === "customer" ? (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={otpSent}
-            />
-            {email && !isValidEmail(email) && (
-              <p className="text-sm text-red-500">Enter a valid email address.</p>
-            )}
-          </div>
+// Countdown timer effect for lockout
+useEffect(() => {
+  let lockTimer: NodeJS.Timeout
+  if (isLocked && lockTimeLeft > 0) {
+    lockTimer = setTimeout(() => setLockTimeLeft(lockTimeLeft - 1), 1000)
+  }
+  if (lockTimeLeft === 0 && isLocked) {
+    setIsLocked(false)
+    setInvalidOtpAttempts(0)
+    setOtpSent(false)
+    setGeneratedOtp("")
+    setOtp("")
+  }
+  return () => clearTimeout(lockTimer)
+}, [isLocked, lockTimeLeft])
 
-          <div className="space-y-2">
-            <Label htmlFor="mobile">Mobile Number</Label>
-            <Input
-              id="mobile"
-              type="tel"
-              placeholder="Enter your mobile number"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              disabled={otpSent}
-            />
-            {mobile && !isValidMobile(mobile) && (
-              <p className="text-sm text-red-500">Enter a valid mobile number.</p>
-            )}
-          </div>
-
-          {otpSent && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="otp">Enter OTP</Label>
-                <Input
-                  id="otp"
-                  type="text"
-                  placeholder="Enter 6-digit OTP"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  disabled={isLocked}
-                />
-              </div>
-
-              <div className="flex justify-between items-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleResendOtp}
-                  disabled={resendTimer > 0 || isLocked}
-                >
-                  {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
-                </Button>
-                {isLocked && (
-                  <p className="text-sm text-red-600 font-semibold">
-                    Account locked. Try again in {lockTimeLeft}s
-                  </p>
-                )}
-              </div>
-            </>
+return (
+  <form onSubmit={handleSubmit} className="space-y-4">
+    {userType === "customer" ? (
+      <>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={otpSent}
+          />
+          {email && !isValidEmail(email) && (
+            <p className="text-sm text-red-500">Enter a valid email address.</p>
           )}
+        </div>
 
-          <Button
-            className="w-full"
-            type="submit"
-            disabled={
-              !isValidEmail(email) ||
-              !isValidMobile(mobile) ||
-              (otpSent && otp.length !== 6) ||
-              isLocked
-            }
-          >
-            {otpSent ? "Verify OTP & Sign In" : "Send OTP"}
-          </Button>
-        </>
-      ) : (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            {username && !isValidUsername(username) && (
-              <p className="text-sm text-red-500">Username must be alphanumeric only.</p>
-            )}
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="mobile">Mobile Number</Label>
+          <Input
+            id="mobile"
+            type="tel"
+            placeholder="Enter your mobile number"
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            disabled={otpSent}
+          />
+          {mobile && !isValidMobile(mobile) && (
+            <p className="text-sm text-red-500">Enter a valid mobile number.</p>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {password && !isValidPassword(password) && (
-              <p className="text-sm text-red-500">
-                Password must be at least 8 characters and include uppercase, lowercase, number, and special character.
-              </p>
-            )}
-          </div>
+        {otpSent && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="otp">Enter OTP</Label>
+              <Input
+                id="otp"
+                type="text"
+                placeholder="Enter 6-digit OTP"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                disabled={isLocked}
+              />
+            </div>
 
-          <Button
-            className="w-full"
-            type="submit"
-            disabled={!isValidUsername(username) || !isValidPassword(password)}
-          >
-            Sign In
-          </Button>
-        </>
-      )}
-    </form>
-  )
+            <div className="flex justify-between items-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleResendOtp}
+                disabled={resendTimer > 0 || isLocked}
+              >
+                {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
+              </Button>
+              {isLocked && (
+                <p className="text-sm text-red-600 font-semibold">
+                  Account locked. Try again in {lockTimeLeft}s
+                </p>
+              )}
+            </div>
+          </>
+        )}
+
+        <Button
+          className="w-full"
+          type="submit"
+          disabled={
+            !isValidEmail(email) ||
+            !isValidMobile(mobile) ||
+            (otpSent && otp.length !== 6) ||
+            isLocked
+          }
+        >
+          {otpSent ? "Verify OTP & Sign In" : "Send OTP"}
+        </Button>
+      </>
+    ) : (
+      <>
+        <div className="space-y-2">
+          <Label htmlFor="username">Username</Label>
+          <Input
+            id="username"
+            type="text"
+            placeholder="Enter your username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          {username && !isValidUsername(username) && (
+            <p className="text-sm text-red-500">Username must be alphanumeric only.</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {password && !isValidPassword(password) && (
+            <p className="text-sm text-red-500">
+              Password must be at least 8 characters and include uppercase, lowercase, number, and special character.
+            </p>
+          )}
+        </div>
+
+        <Button
+          className="w-full"
+          type="submit"
+          disabled={!isValidUsername(username) || !isValidPassword(password)}
+        >
+          Sign In
+        </Button>
+      </>
+    )}
+  </form>
+)
 }
