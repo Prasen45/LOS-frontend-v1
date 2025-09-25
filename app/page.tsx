@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,22 +8,45 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Shield, Users, FileText, TrendingUp } from "lucide-react"
-import { StaffDashboard } from "@/components/staff-dashboard"
 import CustomerDashboard from "@/components/CustomerDashboard"
 import Swal from "sweetalert2"
 
-export default function HomePage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [userType, setUserType] = useState<"customer" | "staff" | null>(null)
+type UserType = "customer" | "staff" | "admin" | null
 
-  if (isAuthenticated && userType) {
-    return userType === "customer" ? <CustomerDashboard /> : <StaffDashboard />
+export default function HomePage() {
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userType, setUserType] = useState<UserType>(null)
+
+  // Redirect admin immediately on login
+  useEffect(() => {
+    if (isAuthenticated && userType === "admin") {
+      router.replace("/dashboard/admin")
+    }
+  }, [isAuthenticated, userType, router])
+
+  // Render CustomerDashboard if customer logged in
+  if (isAuthenticated) {
+    if (userType === "admin") {
+      return (
+        <div className="text-center mt-20 text-lg font-medium">
+          Redirecting to admin dashboard...
+        </div>
+      )
+    }
+    if (userType === "customer") {
+      return <CustomerDashboard />
+    }
+    // For staff: redirect to staff dashboard page (change path as needed)
+    // if (userType === "staff") {
+    //   router.replace("/dashboard/staff")
+    //   return null
+    // }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-4">
             <Shield className="h-12 w-12 text-primary mr-3" />
@@ -33,7 +57,6 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Features */}
         <div className="grid md:grid-cols-3 gap-6 mb-12">
           <Card>
             <CardHeader className="text-center">
@@ -72,7 +95,6 @@ export default function HomePage() {
           </Card>
         </div>
 
-        {/* Authentication */}
         <div className="max-w-md mx-auto">
           <Card>
             <CardHeader>
@@ -101,9 +123,13 @@ export default function HomePage() {
                 <TabsContent value="staff">
                   <LoginForm
                     userType="staff"
-                    onLogin={() => {
+                    onLogin={(type) => {
                       setIsAuthenticated(true)
-                      setUserType("staff")
+                      if (type === "admin") {
+                        setUserType("admin")
+                      } else {
+                        setUserType("staff")
+                      }
                     }}
                   />
                 </TabsContent>
@@ -116,7 +142,13 @@ export default function HomePage() {
   )
 }
 
-function LoginForm({ userType, onLogin }: { userType: "customer" | "staff"; onLogin: () => void }) {
+function LoginForm({
+  userType,
+  onLogin,
+}: {
+  userType: "customer" | "staff"
+  onLogin: (type?: UserType) => void
+}) {
   const [email, setEmail] = useState("")
   const [mobile, setMobile] = useState("")
   const [otp, setOtp] = useState("")
@@ -126,44 +158,28 @@ function LoginForm({ userType, onLogin }: { userType: "customer" | "staff"; onLo
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
 
-  // OTP invalid attempts & lockout
   const [invalidOtpAttempts, setInvalidOtpAttempts] = useState(0)
   const [isLocked, setIsLocked] = useState(false)
-  const [lockTimeLeft, setLockTimeLeft] = useState(0) // seconds
+  const [lockTimeLeft, setLockTimeLeft] = useState(0)
 
-  // Timer for resend OTP
   const [resendTimer, setResendTimer] = useState(0)
   const router = useRouter()
 
-  const isValidEmail = (email: string) =>
-    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(email)
-
-  const isValidMobile = (mobile: string) =>
-    /^(\+?\d{10,15})$/.test(mobile)
-
-  const isValidUsername = (username: string) =>
-    /^[a-zA-Z0-9]+$/.test(username)
-
-  const isValidPassword = (password: string) =>
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/.test(password)
-
-  // Generate and show OTP
   const generateOtp = () => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
     setGeneratedOtp(otp)
     alert(`Your OTP is: ${otp}`)
     setOtpSent(true)
-    setResendTimer(60) // start 60 second timer
+    setResendTimer(60)
   }
 
-  // Handle OTP verification with lock logic
   const handleVerifyOTP = () => {
     if (isLocked) {
       alert(`Account locked. Please wait ${lockTimeLeft} seconds.`)
       return
     }
     if (otp === generatedOtp) {
-      setInvalidOtpAttempts(0) // reset attempts on success
+      setInvalidOtpAttempts(0)
       onLogin()
       router.push("/dashboard/customer")
     } else {
@@ -171,41 +187,38 @@ function LoginForm({ userType, onLogin }: { userType: "customer" | "staff"; onLo
       setInvalidOtpAttempts(attempts)
       alert("Invalid OTP. Please try again.")
       if (attempts >= 5) {
-        // Lock account for 15 minutes (900 seconds)
         setIsLocked(true)
         setLockTimeLeft(900)
       }
     }
   }
 
-  // Staff login handler
   const handleStaffLogin = () => {
     if (username === "admin" && password === "Admin@123") {
-      onLogin()
+      onLogin("admin")
       router.push("/dashboard/admin")
     } else if (username === "sales" && password === "Test@123") {
-      onLogin()
+      onLogin("staff")
       router.push("/dashboard/staff/sales-executive")
     } else if (username === "creditAnalyst" && password === "Test@123") {
-      onLogin()
+      onLogin("staff")
       router.push("/dashboard/staff/credit-analyst")
     } else if (username === "creditManager" && password === "Test@123") {
-      onLogin()
+      onLogin("staff")
       router.push("/dashboard/staff/credit-manager")
     } else if (username === "loanOfficer" && password === "Test@123") {
-      onLogin()
+      onLogin("staff")
       router.push("/dashboard/staff/loan-officer")
     } else {
       Swal.fire({
         icon: "error",
         title: "Invalid Credentials",
         text: "The username or password you entered is incorrect.",
-        confirmButtonColor: "#d33"
+        confirmButtonColor: "#d33",
       })
     }
   }
 
-  // Main submit handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (userType === "customer") {
@@ -223,7 +236,6 @@ function LoginForm({ userType, onLogin }: { userType: "customer" | "staff"; onLo
     }
   }
 
-  // Resend OTP handler
   const handleResendOtp = () => {
     if (resendTimer === 0 && !isLocked) {
       generateOtp()
@@ -231,7 +243,6 @@ function LoginForm({ userType, onLogin }: { userType: "customer" | "staff"; onLo
     }
   }
 
-  // Countdown timer effect for resend OTP
   useEffect(() => {
     let timer: NodeJS.Timeout
     if (resendTimer > 0) {
@@ -240,7 +251,6 @@ function LoginForm({ userType, onLogin }: { userType: "customer" | "staff"; onLo
     return () => clearTimeout(timer)
   }, [resendTimer])
 
-  // Countdown timer effect for lockout
   useEffect(() => {
     let lockTimer: NodeJS.Timeout
     if (isLocked && lockTimeLeft > 0) {
@@ -256,127 +266,111 @@ function LoginForm({ userType, onLogin }: { userType: "customer" | "staff"; onLo
     return () => clearTimeout(lockTimer)
   }, [isLocked, lockTimeLeft])
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {userType === "customer" ? (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+return (
+  <form onSubmit={handleSubmit} className="space-y-4">
+    {userType === "customer" ? (
+      <>
+        <div>
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter the email"
+            disabled={otpSent}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="mobile">Mobile Number</Label>
+          <Input
+            id="mobile"
+            type="tel"
+            required
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            placeholder="Enter the Mobile Number"
+            disabled={otpSent}
+          />
+        </div>
+
+        {otpSent && (
+          <div>
+            <Label htmlFor="otp">OTP</Label>
             <Input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={otpSent}
-            />
-            {email && !isValidEmail(email) && (
-              <p className="text-sm text-red-500">Enter a valid email address.</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="mobile">Mobile Number</Label>
-            <Input
-              id="mobile"
-              type="tel"
-              placeholder="Enter your mobile number"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              disabled={otpSent}
-            />
-            {mobile && !isValidMobile(mobile) && (
-              <p className="text-sm text-red-500">Enter a valid mobile number.</p>
-            )}
-          </div>
-
-          {otpSent && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="otp">Enter OTP</Label>
-                <Input
-                  id="otp"
-                  type="text"
-                  placeholder="Enter 6-digit OTP"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  disabled={isLocked}
-                />
-              </div>
-
-              <div className="flex justify-between items-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleResendOtp}
-                  disabled={resendTimer > 0 || isLocked}
-                >
-                  {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
-                </Button>
-                {isLocked && (
-                  <p className="text-sm text-red-600 font-semibold">
-                    Account locked. Try again in {lockTimeLeft}s
-                  </p>
-                )}
-              </div>
-            </>
-          )}
-
-          <Button
-            className="w-full"
-            type="submit"
-            disabled={
-              !isValidEmail(email) ||
-              !isValidMobile(mobile) ||
-              (otpSent && otp.length !== 6) ||
-              isLocked
-            }
-          >
-            {otpSent ? "Verify OTP & Sign In" : "Send OTP"}
-          </Button>
-        </>
-      ) : (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
+              id="otp"
               type="text"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              required
+              maxLength={6}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              placeholder="Enter the OTP"
             />
-            {username && !isValidUsername(username) && (
-              <p className="text-sm text-red-500">Username must be alphanumeric only.</p>
-            )}
+            <div className="flex justify-center">
+              <Button
+                variant="link"
+                className="mt-2"
+                disabled={resendTimer > 0}
+                onClick={handleResendOtp}
+                type="button"
+              >
+                {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
+              </Button>
+            </div>
           </div>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {password && !isValidPassword(password) && (
-              <p className="text-sm text-red-500">
-                Password must be at least 8 characters and include uppercase, lowercase, number, and special character.
-              </p>
-            )}
-          </div>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={
+            isLocked ||
+            !email ||
+            !mobile ||
+            (otpSent && otp.length !== 6)
+          }
+        >
+          {otpSent ? "Verify OTP" : "Send OTP"}
+        </Button>
+      </>
+    ) : (
+      <>
+        <div>
+          <Label htmlFor="username">Username</Label>
+          <Input
+            id="username"
+            type="text"
+            required
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your username"
+          />
+        </div>
 
-          <Button
-            className="w-full"
-            type="submit"
-            disabled={!isValidUsername(username) || !isValidPassword(password)}
-          >
-            Sign In
-          </Button>
-        </>
-      )}
-    </form>
-  )
+        <div>
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+          />
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={!username || !password}
+        >
+          Login
+        </Button>
+      </>
+    )}
+  </form>
+)
+
 }
