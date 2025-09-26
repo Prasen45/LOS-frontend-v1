@@ -3,7 +3,6 @@
 import { useLoanApplication } from "../LoanFormContext"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { useState, useEffect } from "react"
 import {
   Select,
@@ -14,8 +13,13 @@ import {
 } from "@/components/ui/select"
 
 type LoanProductKey = 'personal' | 'home' | 'business' | 'gold' | 'two-wheeler'
-type LoanApplicationDataKeys = 'loanProduct' | 'loanAmount' | 'tenure' | 'purposeOfLoan' | 'preferredEMIDate' | 'existingEMI'
-
+type LoanApplicationDataKeys =
+  | 'loanProduct'
+  | 'loanAmount'
+  | 'tenure'
+  | 'purposeOfLoan'
+  | 'preferredEMIDate'
+  | 'existingEMI'
 
 const loanConfig: Record<LoanProductKey, {
   label: string
@@ -49,12 +53,10 @@ export default function LoanRequirementsPage() {
   const [showHints, setShowHints] = useState(false)
 
   useEffect(() => {
-    if (selectedLoan) setShowHints(true)
-    else setShowHints(false)
+    setShowHints(!!selectedLoan)
   }, [selectedLoan])
 
   const validateField = (field: string, value: any) => {
-
     let error = ""
 
     switch (field) {
@@ -64,28 +66,27 @@ export default function LoanRequirementsPage() {
 
       case "loanAmount":
         if (!value) error = "Loan Amount is required"
-        if (!config) error = "first select the Loan Product"
+        else if (!config) error = "Select Loan Product first"
         else {
           const valNum = Number(value)
-          if (isNaN(valNum)) error = "Loan Amount must be a number."
+          if (isNaN(valNum)) error = "Loan Amount must be a number"
           else if (valNum < config.minAmount)
-            error = `Minimum loan amount for ${config.label} is ₹${config.minAmount.toLocaleString()}.`
+            error = `Minimum is ₹${config.minAmount.toLocaleString()}`
           else if (valNum > config.maxAmount)
-            error = `Maximum loan amount for ${config.label} is ₹${config.maxAmount.toLocaleString()}.`
+            error = `Maximum is ₹${config.maxAmount.toLocaleString()}`
         }
         break
 
       case "tenure":
-        if (!value) error = "Tenure is required."
-        else if (!config)
-          error = "Please select a loan product first."
+        if (!value) error = "Tenure is required"
+        else if (!config) error = "Select Loan Product first"
         else {
           const valNum = Number(value)
-          if (isNaN(valNum)) error = "Tenure must be a number."
+          if (isNaN(valNum)) error = "Tenure must be a number"
           else if (valNum < config.minTenure)
-            error = `Minimum tenure for ${config.label} is ${config.minTenure} months.`
+            error = `Minimum is ${config.minTenure} months`
           else if (valNum > config.maxTenure)
-            error = `Maximum tenure for ${config.label} is ${config.maxTenure} months.`
+            error = `Maximum is ${config.maxTenure} months`
         }
         break
 
@@ -95,19 +96,19 @@ export default function LoanRequirementsPage() {
 
       case "preferredEMIDate":
         if (!value) error = "Preferred EMI Date is required"
-        if (value) {
+        else {
           const valNum = Number(value)
-          if (isNaN(valNum)) error = "Preferred EMI Date should be positive."
-          if (valNum < 1 || valNum > 28) error = "Preferred EMI Date should be in between 1 to 28."
+          if (isNaN(valNum)) error = "Must be a number"
+          else if (valNum < 1 || valNum > 28) error = "Must be between 1 and 28"
         }
         break
 
       case "existingEMI":
-        if(!value) error = "Existing EMI required"
-        if (value) {
+        if (!value) error = "Existing EMI is required"
+        else {
           const valNum = Number(value)
-          if (valNum < 0)
-            error = "Existing EMI must be a number ≥ 0."
+          if (isNaN(valNum) || valNum < 0)
+            error = "Must be a number ≥ 0"
         }
         break
 
@@ -115,28 +116,26 @@ export default function LoanRequirementsPage() {
         break
     }
 
-    setErrors(prev => ({ ...prev, [field]: error }))
+    setErrors((prev) => ({ ...prev, [field]: error }))
     return error === ""
   }
 
   const handleChange = (field: LoanApplicationDataKeys, value: any) => {
-      updateFormData(field, value)
-      validateField(field, value)
-    // const isValid = validateField(field, value)
-    // if (isValid || value === "") {
-    //   updateFormData(field, value)
-    // }
+    updateFormData(field, value) // Always update input value
   }
-
 
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 gap-4">
+        {/* Loan Product */}
         <div className="space-y-2">
           <Label htmlFor="loanProduct">Loan Product *</Label>
-          <Select value={formData.loanProduct || ""} onValueChange={(value) => {updateFormData("loanProduct", value)
-            setErrors(prev => ({ ...prev, loanAmount: "", tenure: ""}))
-          }} 
+          <Select
+            value={formData.loanProduct || ""}
+            onValueChange={(value) => {
+              updateFormData("loanProduct", value)
+              setErrors(prev => ({ ...prev, loanProduct: "", loanAmount: "", tenure: "" }))
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select loan type" />
@@ -146,34 +145,39 @@ export default function LoanRequirementsPage() {
               <SelectItem value="home">Home Loan</SelectItem>
               <SelectItem value="business">Business Loan</SelectItem>
               <SelectItem value="gold">Gold Loan</SelectItem>
-              <SelectItem value="two-wheeler">Two Wheeler Loan</SelectItem>
+              <SelectItem value="two-wheeler">Two-Wheeler Loan</SelectItem>
             </SelectContent>
           </Select>
           {errors.loanProduct && <p className="text-red-600 text-sm">{errors.loanProduct}</p>}
         </div>
 
+        {/* Loan Amount */}
         <div className="space-y-2">
           <Label htmlFor="loanAmount">Loan Amount (₹) *</Label>
           <Input
             id="loanAmount"
-            type="text"
+            type="number"
             value={formData.loanAmount || ""}
-            onChange={(e) => updateFormData("loanAmount", e.target.value)}
-            placeholder="Enter loan amount"
+            onChange={(e) => handleChange("loanAmount", e.target.value)}
             onBlur={(e) => validateField("loanAmount", e.target.value)}
+            placeholder="Enter loan amount"
           />
-          {showHints && config  &&(<p className="text-[12px] text-gray-600">Min: ₹{config?.minAmount.toLocaleString()}, Max: ₹{config?.maxAmount.toLocaleString()} </p>
-        )}
-         {errors.loanAmount && <p className="text-red-600 text-sm">{errors.loanAmount}</p>}
+          {showHints && config && (
+            <p className="text-[12px] text-gray-600">
+              Min: ₹{config.minAmount.toLocaleString()}, Max: ₹{config.maxAmount.toLocaleString()}
+            </p>
+          )}
+          {errors.loanAmount && <p className="text-red-600 text-sm">{errors.loanAmount}</p>}
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
+        {/* Tenure */}
         <div className="space-y-2">
           <Label htmlFor="tenure">Tenure (Months) *</Label>
           <Input
             id="tenure"
-            type="text"
+            type="number"
             value={formData.tenure || ""}
             onChange={(e) => handleChange("tenure", e.target.value)}
             onBlur={(e) => validateField("tenure", e.target.value)}
@@ -187,21 +191,23 @@ export default function LoanRequirementsPage() {
           {errors.tenure && <p className="text-red-600 text-sm">{errors.tenure}</p>}
         </div>
 
+        {/* Preferred EMI Date */}
         <div className="space-y-2">
-          <Label htmlFor="preferredEMIDate">Preferred EMI Date *</Label>
+          <Label htmlFor="preferredEMIDate">Preferred EMI Date (1–28) *</Label>
           <Input
             id="preferredEMIDate"
-            type="text"
+            type="number"
             value={formData.preferredEMIDate || ""}
             onChange={(e) => handleChange("preferredEMIDate", e.target.value)}
             onBlur={(e) => validateField("preferredEMIDate", e.target.value)}
-            placeholder="Enter the preferred EMI Date"
+            placeholder="Enter preferred EMI date"
           />
           {errors.preferredEMIDate && <p className="text-red-600 text-sm">{errors.preferredEMIDate}</p>}
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
+        {/* Purpose of Loan */}
         <div className="space-y-2">
           <Label htmlFor="purposeOfLoan">Purpose of Loan *</Label>
           <Input
@@ -210,23 +216,24 @@ export default function LoanRequirementsPage() {
             value={formData.purposeOfLoan || ""}
             onChange={(e) => handleChange("purposeOfLoan", e.target.value)}
             onBlur={(e) => validateField("purposeOfLoan", e.target.value)}
-            placeholder="Enter the Purpose of Loan"
+            placeholder="Enter the purpose"
           />
           {errors.purposeOfLoan && <p className="text-red-600 text-sm">{errors.purposeOfLoan}</p>}
         </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="existingEMI">Existing EMI Obligations (₹)</Label>
-        <Input
-          id="existingEMI"
-          type="text"
-          value={formData.existingEMI || ""}
-          onChange={(e) => handleChange("existingEMI", e.target.value)}
-          onBlur={(e) => validateField("existingEMI", e.target.value)}
-          placeholder="Enter existing EMI amount"
-        />
-        {errors.existingEMI && <p className="text-red-600 text-sm">{errors.existingEMI}</p>}
-      </div>
+        {/* Existing EMI */}
+        <div className="space-y-2">
+          <Label htmlFor="existingEMI">Existing EMI Obligations (₹)</Label>
+          <Input
+            id="existingEMI"
+            type="number"
+            value={formData.existingEMI || ""}
+            onChange={(e) => handleChange("existingEMI", e.target.value)}
+            onBlur={(e) => validateField("existingEMI", e.target.value)}
+            placeholder="Enter existing EMI"
+          />
+          {errors.existingEMI && <p className="text-red-600 text-sm">{errors.existingEMI}</p>}
+        </div>
       </div>
     </div>
   )
