@@ -1,7 +1,7 @@
 "use client"
 
-import type React from "react"
-
+// import type React from "react"
+import React from "react"
 import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,7 +40,7 @@ interface Document {
   name: string
   type: "photo-id" | "address-proof" | "income-proof" | "bank-statement" | "passport" | "other"
   file: File | null
-  status: "uploading" | "processing" | "verified" | "rejected" | "pending"
+  status: "uploading" | "processing" | "uploaded" | "verified" | "rejected" | "pending"
   uploadProgress: number
   verificationNotes?: string
   ocrData?: any
@@ -60,22 +60,148 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
   const [documents, setDocuments] = useState<Document[]>([])
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
 
-  const documentTypes = [
-    { key: "photo-id", label: "Photo ID", required: true, description: "Aadhaar, PAN" },
-    {
-      key: "address-proof",
-      label: "Address Proof",
-      required: true,
-      description: "Utility bill, Bank statement, or Rental agreement",
-    },
-    {
-      key: "income-proof",
-      label: "Income Proof",
-      required: true,
-      description: "Salary slips, ITR, or Business income proof",
-    },
-    { key: "bank-statement", label: "Bank Statement", required: true, description: "Last 6 months bank statements" },
-  ]
+  const documentTypes: Array<{
+    key: Document["type"]
+    label: string
+    required: boolean
+    description: string
+    allowedFormats: string[]
+    maxSizeMB: number
+    minSize?: number
+  }> = [
+      {
+        key: "photo-id", label: "Photo ID", required: true, description: "Aadhaar, PAN",
+        allowedFormats: ["application/pdf", "image/jpeg", "image/png"],
+        maxSizeMB: 5,
+      },
+      {
+        key: "address-proof",
+        label: "Address Proof",
+        required: true,
+        description: "Utility bill, Bank statement",
+        allowedFormats: ["application/pdf", "image/jpeg", "image/png"],
+        maxSizeMB: 5,
+      },
+      {
+        key: "passport",
+        label: "Passport Photo",
+        required: true,
+        description: "Scanned passport document",
+        allowedFormats: ["image/jpeg", "image/png"],
+        maxSizeMB: 2,
+        minSize: 500,
+      },
+      {
+        key: "income-proof",
+        label: "Income Proof",
+        required: true,
+        description: "Salary slips, ITR",
+        allowedFormats: ["application/pdf", "image/jpeg", "image/png"],
+        maxSizeMB: 5,
+      },
+      {
+        key: "bank-statement",
+        label: "Bank Statement",
+        required: true,
+        description: "Last 6 months bank statements",
+        allowedFormats: ["application/pdf"],
+        minSize: 10,
+        maxSizeMB: 20,
+      },
+    ]
+
+  const [currentUploadingDocType, setCurrentUploadingDocType] = useState<Document["type"] | null>(null)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const file = e.target.files[0];
+    const fileType = file.type;
+    const fileSizeMB = file.size / 1024 / 1024;
+    const fileSizeKB = file.size / 1024;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size exceeds 5MB limit.");
+      e.target.value = "";
+      return;
+    }
+
+    // Find the relevant doc type constraints
+    const docType = currentEditingDocId
+      ? documents.find((doc) => doc.id === currentEditingDocId)?.type
+      : currentUploadingDocType;
+
+    const docMeta = documentTypes.find((d) => d.key === docType);
+
+    if (!docMeta) {
+      alert("Unknown document type.");
+      return;
+    }
+
+    // Validate file format
+    if (!docMeta.allowedFormats.includes(fileType)) {
+      alert(`Unsupported file format. Allowed: ${docMeta.allowedFormats.join(", ")}`);
+      return;
+    }
+
+    // Validate size
+    if (fileSizeMB > docMeta.maxSizeMB) {
+      alert(`File size exceeds limit of ${docMeta.maxSizeMB}MB`);
+      return;
+    }
+
+    if (docMeta.minSize && fileSizeKB < docMeta.minSize) {
+      alert(`File is too small. Minimum size is ${docMeta.minSize / 1024}MB`);
+      return;
+    }
+
+    // if (!["application/pdf", "image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
+    //   alert("Unsupported file type. Upload PDF, JPG, or PNG.");
+    //   e.target.value = "";
+    //   return;
+    // }
+
+    if (currentEditingDocId) {
+      // Replace existing document's file and reset upload state
+      setDocuments((prev) =>
+        prev.map((doc) =>
+          doc.id === currentEditingDocId
+            ? {
+              ...doc,
+              file,
+              name: file.name,
+              fileSize: file.size,
+              mimeType: file.type,
+              status: "uploading",
+              uploadProgress: 0,
+              uploadedAt: new Date(),
+            }
+            : doc,
+        ),
+      );
+      simulateUpload(currentEditingDocId);
+      setCurrentEditingDocId(null);
+    } else if (currentUploadingDocType) {
+      const newDocument: Document = {
+        id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: file.name,
+        type: currentUploadingDocType,  // use the selected doc type here
+        file,
+        status: "uploading",
+        uploadProgress: 0,
+        uploadedAt: new Date(),
+        fileSize: file.size,
+        mimeType: file.type,
+      };
+
+      setDocuments((prev) => [...prev, newDocument]);
+      simulateUpload(newDocument.id);
+      setCurrentUploadingDocType(null);
+    }
+
+    e.target.value = "";
+  };
+
 
   const handleFiles = (files: File[]) => {
     files.forEach((file) => {
@@ -132,21 +258,21 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
         prev.map((doc) => {
           if (doc.id === documentId) {
             // Simulate OCR data extraction
-            const ocrData = {
-              extractedText: "Sample extracted text from document",
-              confidence: 0.95,
-              detectedFields: {
-                name: "John Doe",
-                documentNumber: "ABCD1234567",
-                dateOfBirth: "1990-01-01",
-              },
-            }
+            // const ocrData = {
+            //   extractedText: "Sample extracted text from document",
+            //   confidence: 0.95,
+            //   detectedFields: {
+            //     name: "John Doe",
+            //     documentNumber: "ABCD1234567",
+            //     dateOfBirth: "1990-01-01",
+            //   },
+            // }
 
             return {
               ...doc,
-              status: "pending",
-              ocrData: ocrData,
-              verificationNotes: "Document processed successfully. Awaiting manual verification.",
+              status: "uploaded",
+              // ocrData: ocrData,
+              verificationNotes: "Document processed sucessfully and uploaded.",
             }
           }
           return doc
@@ -181,12 +307,6 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
         return "bg-blue-100 text-blue-800"
       case "processing":
         return "bg-yellow-100 text-yellow-800"
-      case "verified":
-        return "bg-green-100 text-green-800"
-      case "rejected":
-        return "bg-red-100 text-red-800"
-      case "pending":
-        return "bg-orange-100 text-orange-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -198,22 +318,36 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
         return <Upload className="h-4 w-4" />
       case "processing":
         return <Scan className="h-4 w-4" />
-      case "verified":
-        return <CheckCircle className="h-4 w-4" />
-      case "rejected":
-        return <XCircle className="h-4 w-4" />
-      case "pending":
-        return <Clock className="h-4 w-4" />
       default:
         return <FileText className="h-4 w-4" />
     }
   }
 
+  const handleDownload = (document: Document) => {
+    if (!document.file) {
+      alert("No file available for download");
+      return;
+    }
+    const url = URL.createObjectURL(document.file);
+    const link = window.document.createElement("a");
+    link.href = url;
+    link.download = document.name; // Suggests the file name
+    window.document.body.appendChild(link);
+    link.click();
+    window.document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+
   const requiredDocs = documentTypes.filter((doc) => doc.required)
   const uploadedRequiredDocs = documents.filter(
-    (doc) => requiredDocs.some((reqDoc) => reqDoc.key === doc.type) && doc.status === "verified",
+    (doc) => requiredDocs.some((reqDoc) => reqDoc.key === doc.type) && doc.status === "uploaded",
   )
   const completionPercentage = (uploadedRequiredDocs.length / requiredDocs.length) * 100
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [currentEditingDocId, setCurrentEditingDocId] = useState<string | null>(null);
+
+
 
   return (
     <div className="space-y-6">
@@ -276,11 +410,19 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
                   <div className="flex items-center gap-2">
                     {uploaded ? (
                       <Badge className={getStatusColor(uploaded.status)}>
-                        {getStatusIcon(uploaded.status)}
-                        <span className="ml-1 capitalize">{uploaded.status}</span>
+                        <span className="capitalize">{uploaded.status}</span>
                       </Badge>
                     ) : (
-                      <Badge variant="outline">Not Uploaded</Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setCurrentUploadingDocType(docType.key)
+                          fileInputRef.current?.click()
+                        }}
+                      >
+                        Upload
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -297,273 +439,183 @@ export function DocumentManager({ applicationId, onDocumentsChange, readOnly = f
             <CardTitle>Uploaded Documents</CardTitle>
             <CardDescription>Manage your uploaded documents</CardDescription>
           </CardHeader>
-          <CardContent>
+
+          <CardContent className="overflow-visible relative">
             <div className="space-y-4">
-              {documents.map((document) => (
-                <div key={document.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        {document.mimeType.startsWith("image/") ? (
-                          <ImageIcon className="h-5 w-5 text-primary" />
-                        ) : (
-                          <FileText className="h-5 w-5 text-primary" />
+              {documents.map((document) => {
+                const docMeta = documentTypes.find((dt) => dt.key === document.type)
+
+                return (
+                  <div
+                    key={document.id}
+                    className="relative group border rounded-lg p-4 hover:bg-muted/10 transition-colors"
+                  >
+                    {/* Hover Info Block */}
+                    <div className="absolute top-2 right-2 p-2 bg-white border rounded shadow text-xs text-muted-foreground hidden group-hover:block z-10">
+                      <span className="block">
+                        <strong>Doc Type:</strong> {docMeta?.label || document.type}
+                      </span>
+                      <span className="block">
+                        <strong>Allowed:</strong>{" "}
+                        {docMeta?.allowedFormats
+                          ?.map((f) =>
+                            f
+                              .replace("application/", "")
+                              .replace("image/", "")
+                              .toUpperCase(),
+                          )
+                          .join(", ")}
+                      </span>
+                      <div><strong>Max Size:</strong> {docMeta?.maxSizeMB} MB</div>
+                      {docMeta?.minSize && (
+                        <div><strong>Min Size:</strong> {(docMeta.minSize / 1024).toFixed(2)} MB</div>
+                      )}
+                    </div>
+
+                    <div
+                      key={document.id}
+                      className="relative group border rounded-lg p-4 hover:bg-muted/10 transition-colors"
+                    >
+
+                      {/* Document Details */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                            {document.mimeType.startsWith("image/") ? (
+                              <ImageIcon className="h-5 w-5 text-primary" />
+                            ) : (
+                              <FileText className="h-5 w-5 text-primary" />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-medium">{document.name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {(document.fileSize / 1024 / 1024).toFixed(2)} MB • Uploaded{" "}
+                              {document.uploadedAt.toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+
+                      </div>
+
+                      {/* Upload Progress */}
+                      {document.status === "uploading" && (
+                        <div className="mb-2">
+                          <Progress value={document.uploadProgress} className="h-2" />
+                        </div>
+                      )}
+
+                      {/* Document Type Selection */}
+                      {!readOnly && document.status !== "uploading" && (
+                        <div className="mb-2">
+                          <Label className="text-sm">Document Type</Label>
+                          <p className="mt-1 p-2 border rounded-md text-sm bg-gray-100">{documentTypes.find(dt => dt.key === document.type)?.label || document.type}</p>
+                        </div>
+                      )}
+
+                      {/* Verification Notes */}
+                      {document.verificationNotes && (
+                        <Alert className="mb-2">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription className="text-sm">{document.verificationNotes}</AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2">
+                        {(document.status === "processing" || document.status === "uploaded") && (
+                          <>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedDocument(document)}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+
+                            <Button variant="outline" size="sm" onClick={() => handleDownload(document)}>
+                              <Download className="h-4 w-4 mr-1" />
+                              Download
+                            </Button>
+                          </>
+                        )}
+
+                        {!readOnly && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setCurrentEditingDocId(document.id)
+                                fileInputRef.current?.click()
+                              }}
+                              disabled={document.status === "uploading"}
+                            >
+                              <Upload className="h-4 w-4 mr-1" />
+                              Upload
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => deleteDocument(document.id)}>
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </>
                         )}
                       </div>
-                      <div>
-                        <h4 className="font-medium">{document.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {(document.fileSize / 1024 / 1024).toFixed(2)} MB • Uploaded{" "}
-                          {document.uploadedAt.toLocaleDateString()}
-                        </p>
-                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={getStatusColor(document.status)}>
-                        {getStatusIcon(document.status)}
-                        <span className="ml-1 capitalize">{document.status.replace("-", " ")}</span>
-                      </Badge>
-                    </div>
-                  </div>
+                    <Dialog
+                      open={selectedDocument !== null}
+                      onOpenChange={(open) => {
+                        if (!open) setSelectedDocument(null)
+                      }}
+                    >
+                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+                        <DialogHeader>
+                          <DialogTitle>{selectedDocument?.name}</DialogTitle>
+                          <DialogDescription>
+                            Uploaded on: {selectedDocument?.uploadedAt.toLocaleString()}
+                          </DialogDescription>
+                        </DialogHeader>
 
-                  {/* Upload Progress */}
-                  {document.status === "uploading" && (
-                    <div className="mb-2">
-                      <Progress value={document.uploadProgress} className="h-2" />
-                    </div>
-                  )}
+                        <div className="mt-4">
+                          {selectedDocument?.mimeType.startsWith("image/") ? (
+                            <img
+                              src={URL.createObjectURL(selectedDocument.file!)}
+                              alt={selectedDocument.name}
+                              className="max-w-full max-h-[60vh] object-contain rounded"
+                            />
+                          ) : selectedDocument?.mimeType === "application/pdf" ? (
+                            <iframe
+                              src={URL.createObjectURL(selectedDocument.file!)}
+                              className="w-full h-[60vh]"
+                              title={selectedDocument.name}
+                            />
+                          ) : (
+                            <p>Preview not available for this file type.</p>
+                          )}
+                        </div>
 
-                  {/* Document Type Selection */}
-                  {!readOnly && document.status !== "uploading" && (
-                    <div className="mb-2">
-                      <Label className="text-sm">Document Type</Label>
-                      <select
-                        value={document.type}
-                        onChange={(e) => updateDocumentType(document.id, e.target.value as Document["type"])}
-                        className="w-full mt-1 p-2 border rounded-md text-sm"
-                      >
-                        {documentTypes.map((type) => (
-                          <option key={type.key} value={type.key}>
-                            {type.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Verification Notes */}
-                  {document.verificationNotes && (
-                    <Alert className="mb-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription className="text-sm">{document.verificationNotes}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" onClick={() => setSelectedDocument(document)}>
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                        <DocumentViewer document={document} onVerify={verifyDocument} readOnly={readOnly} />
+                        <div className="mt-4 flex justify-end">
+                          <Button variant="outline" onClick={() => setSelectedDocument(null)}>
+                            Close
+                          </Button>
+                        </div>
                       </DialogContent>
                     </Dialog>
 
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      Download
-                    </Button>
-
-                    {!readOnly && (
-                      <Button variant="outline" size="sm" onClick={() => deleteDocument(document.id)}>
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
-                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>
       )}
+
+      <input
+        type="file"
+        accept=".pdf,image/*"
+        className="hidden"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+      />
     </div>
   )
 }
 
-function DocumentViewer({
-  document,
-  onVerify,
-  readOnly,
-}: {
-  document: Document
-  onVerify: (id: string, status: "verified" | "rejected", notes?: string) => void
-  readOnly: boolean
-}) {
-  const [verificationNotes, setVerificationNotes] = useState("")
-
-  return (
-    <div className="space-y-6">
-      <DialogHeader>
-        <DialogTitle>Document Viewer - {document.name}</DialogTitle>
-        <DialogDescription>Review document details and verification status</DialogDescription>
-      </DialogHeader>
-
-      <Tabs defaultValue="preview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          {document.ocrData && <TabsTrigger value="ocr">OCR Data</TabsTrigger>}
-          {!readOnly && <TabsTrigger value="verify">Verify</TabsTrigger>}
-        </TabsList>
-
-        <TabsContent value="preview">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="bg-muted rounded-lg p-8 text-center">
-                {document.mimeType.startsWith("image/") ? (
-                  <div>
-                    <ImageIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Image preview would appear here</p>
-                  </div>
-                ) : (
-                  <div>
-                    <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">PDF preview would appear here</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="details">
-          <Card>
-            <CardHeader>
-              <CardTitle>Document Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>File Name:</strong> {document.name}
-                </div>
-                <div>
-                  <strong>File Size:</strong> {(document.fileSize / 1024 / 1024).toFixed(2)} MB
-                </div>
-                <div>
-                  <strong>File Type:</strong> {document.mimeType}
-                </div>
-                <div>
-                  <strong>Document Type:</strong> {document.type.replace("-", " ").toUpperCase()}
-                </div>
-                <div>
-                  <strong>Upload Date:</strong> {document.uploadedAt.toLocaleString()}
-                </div>
-                <div>
-                  <strong>Status:</strong>
-                  <Badge
-                    className={`ml-2 ${
-                      document.status === "verified"
-                        ? "bg-green-100 text-green-800"
-                        : document.status === "rejected"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {document.status.replace("-", " ").toUpperCase()}
-                  </Badge>
-                </div>
-              </div>
-              {document.verifiedAt && (
-                <div className="text-sm">
-                  <strong>Verified At:</strong> {document.verifiedAt.toLocaleString()}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {document.ocrData && (
-          <TabsContent value="ocr">
-            <Card>
-              <CardHeader>
-                <CardTitle>OCR Extracted Data</CardTitle>
-                <CardDescription>Automatically extracted information from the document</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium">Confidence Score</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Progress value={document.ocrData.confidence * 100} className="flex-1 h-2" />
-                    <span className="text-sm">{(document.ocrData.confidence * 100).toFixed(1)}%</span>
-                  </div>
-                </div>
-
-                {document.ocrData.detectedFields && (
-                  <div>
-                    <Label className="text-sm font-medium">Detected Fields</Label>
-                    <div className="mt-2 space-y-2">
-                      {Object.entries(document.ocrData.detectedFields).map(([key, value]) => (
-                        <div key={key} className="flex justify-between text-sm">
-                          <span className="capitalize">{key.replace(/([A-Z])/g, " $1")}:</span>
-                          <span className="font-medium">{value as string}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <Label className="text-sm font-medium">Extracted Text</Label>
-                  <div className="mt-2 p-3 bg-muted rounded-lg text-sm">{document.ocrData.extractedText}</div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
-        {!readOnly && (
-          <TabsContent value="verify">
-            <Card>
-              <CardHeader>
-                <CardTitle>Document Verification</CardTitle>
-                <CardDescription>Review and verify the uploaded document</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="notes">Verification Notes</Label>
-                  <textarea
-                    id="notes"
-                    value={verificationNotes}
-                    onChange={(e) => setVerificationNotes(e.target.value)}
-                    placeholder="Add notes about document verification..."
-                    className="w-full mt-2 p-3 border rounded-lg text-sm"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => onVerify(document.id, "verified", verificationNotes)}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Verify Document
-                  </Button>
-                  <Button variant="destructive" onClick={() => onVerify(document.id, "rejected", verificationNotes)}>
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject Document
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
-    </div>
-  )
-}

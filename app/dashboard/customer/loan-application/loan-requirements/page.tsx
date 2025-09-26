@@ -120,10 +120,12 @@ export default function LoanRequirementsPage() {
   }
 
   const handleChange = (field: LoanApplicationDataKeys, value: any) => {
-    const isValid = validateField(field, value)
-    if (isValid || value === "") {
       updateFormData(field, value)
-    }
+      validateField(field, value)
+    // const isValid = validateField(field, value)
+    // if (isValid || value === "") {
+    //   updateFormData(field, value)
+    // }
   }
 
 
