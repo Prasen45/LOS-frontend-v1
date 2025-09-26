@@ -1,446 +1,472 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Eye, CheckCircle, XCircle, FileText, Edit } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useMemo, useState } from "react"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card"
+import { mockApplications, Application } from "@/components/mockApplications"
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Eye } from "lucide-react"
 
-interface Document {
-  id: string
-  name: string
-  url?: string
-  verified?: boolean
-  note?: string
+interface PageProps {
+  params: {
+    id: string
+  }
 }
 
-interface ScoreOverride {
-  overriddenBy: string
-  newScore: number
-  reason: string
-  date: string
+// Simple Toast component for sweet notifications
+function Toast({
+  message,
+  type = "success",
+  onClose,
+}: {
+  message: string
+  type?: "success" | "error"
+  onClose: () => void
+}) {
+  return (
+    <div
+      className={`fixed bottom-6 right-6 px-4 py-3 rounded shadow-lg text-white font-semibold transition-opacity duration-300 cursor-pointer ${
+        type === "success" ? "bg-green-500" : "bg-red-500"
+      }`}
+      role="alert"
+      onClick={onClose}
+    >
+      {message}
+    </div>
+  )
 }
 
-interface Application {
-  id: string
-  customerName: string
-  loanType: string
-  amount: number
-  submittedDate: string
-  documents: Document[]
-  bureauScore?: number
-  systemScore?: number
-  salarySlipValidated?: "pending" | "approved" | "rejected"
-  salaryValidationNote?: string
-  scoreOverrides?: ScoreOverride[]
-
-  // New personal details fields
-  firstName: string
-  lastName: string
-  dateOfBirth: string
-  gender: string
-  email: string
-  mobile: string
-  addressLine1: string
-  addressLine2?: string
-  city: string
-  state: string
-  postalCode: string
-  nationalIdType: string
-  nationalIdNumber: string
-  monthlyIncome: number
-
-  // New loan requirements
-  loanProduct: string
-  loanAmount: number
-  tenureMonths: number
-  loanPurpose: string
-  preferredEmiDate: string
-  existingEmiObligations: string
-}
-
-const mockApplications: Application[] = [
-  {
-    id: "APP100",
-    customerName: "Asha Verma",
-    loanType: "Personal Loan",
-    amount: 300000,
-    submittedDate: "2024-02-01",
-    documents: [
-      { id: "doc1", name: "Photo ID - Asha.pdf", url: "#" },
-      { id: "doc2", name: "Salary Slip Jan 2024.pdf", url: "#" },
-      { id: "doc5", name: "Address Proof - Asha.pdf", url: "#" },
-      { id: "doc6", name: "Bank Statement Jan 2024.pdf", url: "#" },
-    ],
-    bureauScore: 710,
-    systemScore: 0.78,
-    salarySlipValidated: "pending",
-    scoreOverrides: [],
-
-    firstName: "Asha",
-    lastName: "Verma",
-    dateOfBirth: "1990-05-20",
-    gender: "Female",
-    email: "asha.verma@example.com",
-    mobile: "9876543210",
-    addressLine1: "123 MG Road",
-    addressLine2: "Apt 4B",
-    city: "Mumbai",
-    state: "Maharashtra",
-    postalCode: "400001",
-    nationalIdType: "Aadhaar",
-    nationalIdNumber: "1234-5678-9012",
-    monthlyIncome: 75000,
-
-    loanProduct: "Personal Loan",
-    loanAmount: 300000,
-    tenureMonths: 24,
-    loanPurpose: "Home renovation",
-    preferredEmiDate: "5th of every month",
-    existingEmiObligations: "Car loan - ₹10,000 monthly",
-  },
-  {
-    id: "APP101",
-    customerName: "Vikram Rao",
-    loanType: "Home Loan",
-    amount: 4500000,
-    submittedDate: "2024-01-20",
-    documents: [
-      { id: "doc3", name: "Photo ID - Vikram.pdf", url: "#" },
-      { id: "doc4", name: "Salary Slip Dec 2023.pdf", url: "#" },
-      { id: "doc7", name: "Address Proof - Vikram.pdf", url: "#" },
-      { id: "doc8", name: "Bank Statement Dec 2023.pdf", url: "#" },
-    ],
-    bureauScore: 640,
-    systemScore: 0.62,
-    salarySlipValidated: "approved",
-    scoreOverrides: [
-      {
-        overriddenBy: "Analyst1",
-        newScore: 660,
-        reason: "Manual review of additional bank statements",
-        date: new Date().toISOString(),
-      },
-    ],
-
-    firstName: "Vikram",
-    lastName: "Rao",
-    dateOfBirth: "1985-11-10",
-    gender: "Male",
-    email: "vikram.rao@example.com",
-    mobile: "9123456780",
-    addressLine1: "789 Park Street",
-    addressLine2: "",
-    city: "Bangalore",
-    state: "Karnataka",
-    postalCode: "560001",
-    nationalIdType: "PAN",
-    nationalIdNumber: "ABCDE1234F",
-    monthlyIncome: 120000,
-
-    loanProduct: "Home Loan",
-    loanAmount: 4500000,
-    tenureMonths: 120,
-    loanPurpose: "House purchase",
-    preferredEmiDate: "10th of every month",
-    existingEmiObligations: "None",
-  },
-]
-
-export default function CreditAnalystDashboard() {
-  const [applications, setApplications] = useState<Application[]>(mockApplications)
-  const [selectedApp, setSelectedApp] = useState<Application | null>(null)
-  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
-  const [overrideScoreValue, setOverrideScoreValue] = useState<string>("")
-  const [overrideReason, setOverrideReason] = useState<string>("")
-  const [salaryNote, setSalaryNote] = useState<string>("")
+export default function ReviewPage({ params }: PageProps) {
   const router = useRouter()
+  const [isRejectOpen, setIsRejectOpen] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState("")
+  const [isApproving, setIsApproving] = useState(false)
+  const [isRejecting, setIsRejecting] = useState(false)
 
-  // Mark document verified / rejected with optional note
-  const updateDocumentVerification = (appId: string, docId: string, verified: boolean, note?: string) => {
-    setApplications((prev) =>
-      prev.map((a) =>
-        a.id === appId
-          ? {
-              ...a,
-              documents: a.documents.map((d) => (d.id === docId ? { ...d, verified, note } : d)),
-            }
-          : a,
-      ),
+  // Toast state
+  const [toast, setToast] = useState<
+    { message: string; type: "success" | "error" } | null
+  >(null)
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type })
+    setTimeout(() => {
+      setToast(null)
+    }, 3000) // auto-hide after 3 seconds
+  }
+
+  // Track open document dialog id (null if none)
+  const [openDocId, setOpenDocId] = useState<string | null>(null)
+
+  // Local state to track verification status and note per document
+  // key: doc.id, value: { verified: boolean | null, note: string }
+  const [docStates, setDocStates] = useState<
+    Record<
+      string,
+      {
+        verified: boolean | null
+        note: string
+      }
+    >
+  >({})
+
+  const application = useMemo<Application | undefined>(() => {
+    return mockApplications.find(
+      (app) => app.id.toLowerCase() === params.id.toLowerCase()
+    )
+  }, [params.id])
+
+  // Local status state to show after approve/reject
+  const [currentStatus, setCurrentStatus] = useState(application?.status ?? "")
+
+  if (!application) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <h1 className="text-2xl font-bold mb-4">Application Not Found</h1>
+        <p className="text-muted-foreground mb-6">
+          The application you're trying to view does not exist.
+        </p>
+        <Button variant="outline" onClick={() => router.back()}>
+          Go Back
+        </Button>
+      </div>
     )
   }
 
-  // Validate salary slip with note
-  const setSalaryValidation = (appId: string, status: "approved" | "rejected", note?: string) => {
-    setApplications((prev) =>
-      prev.map((a) => (a.id === appId ? { ...a, salarySlipValidated: status, salaryValidationNote: note } : a)),
-    )
-    setSalaryNote("")
+  // Initialize docStates for all documents on first render
+  // Only if not already initialized
+  if (
+    Object.keys(docStates).length === 0 &&
+    application.documents.length > 0
+  ) {
+    const initialStates: typeof docStates = {}
+    application.documents.forEach((doc) => {
+      initialStates[doc.id] = { verified: null, note: "" }
+    })
+    setDocStates(initialStates)
   }
 
-  // Override bureau score with justification and save audit
-  const overrideScore = (appId: string) => {
-    const newScore = Number(overrideScoreValue)
-    if (Number.isNaN(newScore) || overrideReason.trim() === "") {
-      alert("Please enter a valid score and justification")
+  const updateDocumentVerification = (
+    appId: string,
+    docId: string,
+    verified: boolean,
+    note: string
+  ) => {
+    setDocStates((prev) => ({
+      ...prev,
+      [docId]: { verified, note },
+    }))
+  }
+
+  const handleApprove = () => {
+    setIsApproving(true)
+    setTimeout(() => {
+      setIsApproving(false)
+      setCurrentStatus("approved") // Update status locally
+      showToast("Application approved!", "success") // Sweet toast instead of alert
+      router.push("/dashboard/staff/credit-analyst")
+    }, 1500)
+  }
+
+  const handleReject = () => {
+    if (!rejectionReason.trim()) {
+      showToast("Please enter a justification for rejection.", "error")
       return
     }
-    const overrideEntry: ScoreOverride = {
-      overriddenBy: "currentAnalyst", // Replace with real user
-      newScore,
-      reason: overrideReason,
-      date: new Date().toISOString(),
-    }
-
-    setApplications((prev) =>
-      prev.map((a) =>
-        a.id === appId
-          ? {
-              ...a,
-              bureauScore: newScore,
-              scoreOverrides: [...(a.scoreOverrides || []), overrideEntry],
-            }
-          : a,
-      ),
-    )
-
-    // Clear override input and close detail panel
-    setOverrideScoreValue("")
-    setOverrideReason("")
-    setSelectedApp(null)
-  }
-
-  const getStatusBadge = (app: Application) => {
-    if (app.salarySlipValidated === "pending")
-      return <Badge variant="outline">Salary: Pending</Badge>
-    if (app.salarySlipValidated === "approved")
-      return <Badge className="bg-green-100 text-green-800">Salary: Approved</Badge>
-    if (app.salarySlipValidated === "rejected")
-      return <Badge className="bg-red-100 text-red-800">Salary: Rejected</Badge>
-    return <Badge>Unknown</Badge>
+    setIsRejecting(true)
+    setTimeout(() => {
+      setIsRejecting(false)
+      setIsRejectOpen(false)
+      setCurrentStatus("rejected") // Update status locally
+      showToast(`Application rejected with reason: ${rejectionReason}`, "error")
+      router.push("/dashboard/staff/credit-analyst")
+    }, 1500)
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Credit Analyst Dashboard</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push("/")}>
-            Sign Out
+    <>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">
+            Review Application — {application.customerName}
+          </h1>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/staff/credit-analyst")}
+          >
+            Back to Dashboard
           </Button>
         </div>
-      </div>
 
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
-        {applications.map((app) => (
-          <Card key={app.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between w-full">
-                <div>
-                  <CardTitle className="text-sm font-medium">
-                    {app.customerName} — {app.loanType}
-                  </CardTitle>
-                  <div className="text-xs text-muted-foreground">
-                    {app.id} • Submitted:{" "}
-                    {new Date(app.submittedDate).toLocaleDateString()}
-                  </div>
+        <div className="mb-6">
+          <strong>Status: </strong>
+          <span
+            className={`font-semibold ${
+              currentStatus === "approved"
+                ? "text-green-600"
+                : currentStatus === "rejected"
+                ? "text-red-600"
+                : "text-yellow-600"
+            }`}
+          >
+            {currentStatus.replace(/-/g, " ").toUpperCase()}
+          </span>
+        </div>
+
+        <Card className="mb-8 shadow-md">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold">
+              Application Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-base">
+            <div>
+              <strong>Application ID:</strong> {application.id}
+            </div>
+            <div>
+              <strong>Submitted:</strong>{" "}
+              {new Date(application.submittedDate).toLocaleDateString()}
+            </div>
+            <div>
+              <strong>Loan Type:</strong> {application.loanType}
+            </div>
+            <div>
+              <strong>Loan Amount:</strong> ₹
+              {application.amount.toLocaleString()}
+            </div>
+
+            {/* Bureau Score */}
+            <div>
+              <div className="border border-yellow-300 rounded-lg p-2 text-center shadow-sm">
+                <div className="text-1xl font-bold text-yellow-700">
+                  {application.bureauScore ?? "N/A"}
                 </div>
-                <div className="text-right">
-                  <div className="mb-1">
-                    <span className="text-sm font-semibold">Bureau:</span>{" "}
-                    <span className="ml-1 font-bold">{app.bureauScore ?? "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className="text-sm font-semibold">System score:</span>{" "}
-                    <span className="ml-1 font-medium">
-                      {typeof app.systemScore === "number"
-                        ? app.systemScore.toFixed(2)
-                        : "N/A"}
-                    </span>
-                  </div>
-                </div>
+                <div className="text-sm text-yellow-600">Bureau Score</div>
               </div>
-            </CardHeader>
+            </div>
 
-            <CardContent>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  <span className="text-sm">Documents ({app.documents.length})</span>
+            {/* System Score */}
+            <div>
+              <div className="border border-purple-300 rounded-lg p-2 text-center shadow-sm">
+                <div className="text-1xl font-bold text-purple-700">
+                  {application.systemScore?.toFixed(2) ?? "N/A"}
                 </div>
-
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(app)}
-                  <Button size="sm" variant="ghost" onClick={() => setSelectedApp(app)}>
-                    <Eye className="h-4 w-4 mr-1" /> Review
-                  </Button>
-                </div>
+                <div className="text-sm text-purple-600">System Score</div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
 
-              <div className="space-y-2">
-                {app.documents.map((d) => (
-                  <div
-                    key={d.id}
-                    className="flex items-center justify-between border rounded-md p-2"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div className="text-sm font-medium">{d.name}</div>
-                        {d.verified !== undefined && (
-                          <div className="text-xs text-muted-foreground">
-                            {d.verified ? (
-                              <span className="text-green-600">Verified</span>
-                            ) : (
-                              <span className="text-red-600">Rejected</span>
-                            )}
-                            {d.note ? ` — Note: ${d.note}` : ""}
-                          </div>
-                        )}
+        {/* Personal Information */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold">
+              Personal Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-base">
+            <div>
+              <strong>Name:</strong> {application.firstName} {application.lastName}
+            </div>
+            <div>
+              <strong>DOB:</strong>{" "}
+              {new Date(application.dateOfBirth).toLocaleDateString()}
+            </div>
+            <div>
+              <strong>Gender:</strong> {application.gender}
+            </div>
+            <div>
+              <strong>Email:</strong> {application.email}
+            </div>
+            <div>
+              <strong>Mobile:</strong> {application.mobile}
+            </div>
+            <div>
+              <strong>Address:</strong> {application.addressLine1},{" "}
+              {application.addressLine2}, {application.city}, {application.state} -{" "}
+              {application.postalCode}
+            </div>
+            <div>
+              <strong>ID Type:</strong> {application.nationalIdType}
+            </div>
+            <div>
+              <strong>ID Number:</strong> {application.nationalIdNumber}
+            </div>
+            <div>
+              <strong>Monthly Income:</strong> ₹
+              {application.monthlyIncome.toLocaleString()}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Loan Requirements */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold">Loan Requirements</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-base">
+            <div>
+              <strong>Loan Product:</strong> {application.loanProduct}
+            </div>
+            <div>
+              <strong>Loan Amount:</strong> ₹
+              {application.loanAmount.toLocaleString()}
+            </div>
+            <div>
+              <strong>Tenure (months):</strong> {application.tenureMonths}
+            </div>
+            <div>
+              <strong>Purpose:</strong> {application.loanPurpose}
+            </div>
+            <div>
+              <strong>Preferred EMI Date:</strong> {application.preferredEmiDate}
+            </div>
+            <div>
+              <strong>Existing EMI:</strong> {application.existingEmiObligations}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KYC / Documents */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold">KYC / Documents</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-base">
+            {application.documents.map((doc) => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between border p-3 rounded hover:bg-gray-50 transition"
+              >
+                <span className="font-medium">{doc.name}</span>
+
+                {/* Dialog trigger for view */}
+                <Dialog
+                  open={openDocId === doc.id}
+                  onOpenChange={(open) => {
+                    if (!open) setOpenDocId(null)
+                  }}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1"
+                      onClick={() => setOpenDocId(doc.id)}
+                    >
+                      <Eye className="h-4 w-4" /> View
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-5xl w-full">
+                    {/* Increased max width */}
+
+                    <DialogHeader>
+                      <DialogTitle>{doc.name}</DialogTitle>
+                    </DialogHeader>
+
+                    {/* Embed the document if URL is suitable (PDF, image) */}
+                    <div className="mb-4">
+                      {doc.url ? (
+                        <iframe
+                          src={doc.url}
+                          className="w-full h-[700px] border" // Increased height
+                          title={doc.name}
+                        />
+                      ) : (
+                        <p className="text-center text-muted-foreground">
+                          No document URL available
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Approve / Reject section */}
+                    <div className="space-y-3">
+                      <Button
+                        variant="default"
+                        className="w-full"
+                        onClick={() => {
+                          updateDocumentVerification(application.id, doc.id, true, "")
+                          setOpenDocId(null)
+                        }}
+                      >
+                        Approve
+                      </Button>
+
+                      <div className="space-y-2">
+                        <Textarea
+                          placeholder="Reason for rejection (optional)"
+                          rows={3}
+                          value={docStates[doc.id]?.note || ""}
+                          onChange={(e) =>
+                            setDocStates((prev) => ({
+                              ...prev,
+                              [doc.id]: {
+                                verified: prev[doc.id]?.verified ?? null,
+                                note: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full"
+                        />
+                        <Button
+                          variant="destructive"
+                          className="w-full"
+                          onClick={() => {
+                            updateDocumentVerification(
+                              application.id,
+                              doc.id,
+                              false,
+                              docStates[doc.id]?.note || ""
+                            )
+                            setOpenDocId(null)
+                          }}
+                        >
+                          Reject
+                        </Button>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        //size="xs"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedDoc(d)
-                          setSelectedApp(app)
-                        }}
-                      >
-                        <Edit className="h-3 w-3" />
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setOpenDocId(null)}>
+                        Close
                       </Button>
-                    </div>
-                  </div>
-                ))}
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
+            ))}
+          </CardContent>
+        </Card>
 
-              {/* Show detailed panel when selected */}
-              {selectedApp?.id === app.id && (
-                <div className="mt-6 border-t pt-4">
-                  {/* Personal Details Section */}
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3">Personal Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div><strong>First Name:</strong> {app.firstName}</div>
-                      <div><strong>Last Name:</strong> {app.lastName}</div>
-                      <div><strong>Date of Birth:</strong> {new Date(app.dateOfBirth).toLocaleDateString()}</div>
-                      <div><strong>Gender:</strong> {app.gender}</div>
-                      <div><strong>Email:</strong> {app.email}</div>
-                      <div><strong>Mobile:</strong> {app.mobile}</div>
-                      <div><strong>Address Line 1:</strong> {app.addressLine1}</div>
-                      <div><strong>Address Line 2:</strong> {app.addressLine2 || "-"}</div>
-                      <div><strong>City:</strong> {app.city}</div>
-                      <div><strong>State:</strong> {app.state}</div>
-                      <div><strong>Postal Code:</strong> {app.postalCode}</div>
-                      <div><strong>National ID Type:</strong> {app.nationalIdType}</div>
-                      <div><strong>National ID Number:</strong> {app.nationalIdNumber}</div>
-                      <div><strong>Monthly Income:</strong> ₹{app.monthlyIncome.toLocaleString()}</div>
-                    </div>
-                  </div>
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-3 mt-8 justify-end">
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/staff/credit-analyst")}
+            disabled={isApproving || isRejecting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => setIsRejectOpen(true)}
+            disabled={isApproving || isRejecting}
+          >
+            Reject
+          </Button>
+          <Button onClick={handleApprove} disabled={isApproving || isRejecting}>
+            {isApproving ? "Approving..." : "Approve"}
+          </Button>
+        </div>
 
-                  {/* Loan Requirements Section */}
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3">Loan Requirements</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div><strong>Loan Product:</strong> {app.loanProduct}</div>
-                      <div><strong>Loan Amount:</strong> ₹{app.loanAmount.toLocaleString()}</div>
-                      <div><strong>Tenure (months):</strong> {app.tenureMonths}</div>
-                      <div><strong>Purpose of Loan:</strong> {app.loanPurpose}</div>
-                      <div><strong>Preferred EMI Date:</strong> {app.preferredEmiDate}</div>
-                      <div><strong>Existing EMI Obligations:</strong> {app.existingEmiObligations}</div>
-                    </div>
-                  </div>
-
-                  {/* KYC & Documents Upload Section */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-3">KYC & Documents Upload</h3>
-                    <div className="space-y-2 text-sm">
-                      {["Photo ID", "Address Proof", "Income Proof", "Bank Statement"].map((docType) => {
-                        const doc = app.documents.find((d) =>
-                          d.name.toLowerCase().includes(docType.toLowerCase())
-                        )
-                        return (
-                          <div
-                            key={docType}
-                            className="flex items-center justify-between border rounded-md p-2"
-                          >
-                            <div>{docType}</div>
-                            {doc ? (
-                              <a
-                                href={doc.url || "#"}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-blue-600 underline"
-                              >
-                                {doc.name}
-                              </a>
-                            ) : (
-                              <span className="text-red-600">Not uploaded</span>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+        {/* Reject Justification Modal */}
+        <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Application</DialogTitle>
+            </DialogHeader>
+            <Textarea
+              placeholder="Enter reason for rejection"
+              rows={4}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+            <DialogFooter className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setIsRejectOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                disabled={isRejecting}
+              >
+                {isRejecting ? "Rejecting..." : "Reject"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Dialog to edit document verification note */}
-      <Dialog open={!!selectedDoc} onOpenChange={() => setSelectedDoc(null)}>
-        <DialogContent className="sm:max-w-[425px]">
-          <h3 className="mb-4 text-lg font-semibold">Verify Document</h3>
-          <div className="mb-4">
-            <p className="text-sm font-medium">Document: {selectedDoc?.name}</p>
-          </div>
-
-          <Textarea
-            placeholder="Add note or reason (optional)"
-            value={selectedDoc?.note || ""}
-            onChange={(e) => {
-              if (selectedDoc) {
-                const note = e.target.value
-                setSelectedDoc({ ...selectedDoc, note })
-              }
-            }}
-            rows={3}
-            className="mb-4"
-          />
-
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (selectedDoc && selectedApp) {
-                  updateDocumentVerification(selectedApp.id, selectedDoc.id, false, selectedDoc.note)
-                  setSelectedDoc(null)
-                }
-              }}
-            >
-              <XCircle className="mr-2 h-4 w-4" /> Reject
-            </Button>
-            <Button
-              onClick={() => {
-                if (selectedDoc && selectedApp) {
-                  updateDocumentVerification(selectedApp.id, selectedDoc.id, true, selectedDoc.note)
-                  setSelectedDoc(null)
-                }
-              }}
-            >
-              <CheckCircle className="mr-2 h-4 w-4" /> Approve
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </>
   )
 }
